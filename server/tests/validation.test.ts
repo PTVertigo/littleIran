@@ -36,3 +36,10 @@ describe('isStrongPassword', () => {
     expect(isStrongPassword(password)).toBe(false);
   });
 });
+
+describe('isStrongPassword length cap', () => {
+  it('rejects passwords over 72 bytes, which bcrypt would truncate', () => {
+    expect(isStrongPassword(`Aa1!${'x'.repeat(69)}`)).toBe(false);
+    expect(isStrongPassword(`Aa1!${'x'.repeat(68)}`)).toBe(true);
+  });
+});
