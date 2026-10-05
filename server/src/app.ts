@@ -1,4 +1,5 @@
 import express, { type ErrorRequestHandler } from 'express';
+import { authRouter } from './routes/auth';
 import { usersRouter } from './routes/users';
 
 // REQ-4.2 never leak stack traces or database details to the client
@@ -19,6 +20,7 @@ export function createApp() {
     res.json({ status: 'ok' });
   });
   app.use('/api/users', usersRouter);
+  app.use('/api/auth', authRouter);
 
   app.use(errorHandler);
   return app;

@@ -1,9 +1,9 @@
 import bcrypt from 'bcrypt';
 import { Router } from 'express';
 import { pool } from '../db';
+import { BCRYPT_ROUNDS, PUBLIC_USER_COLUMNS } from '../users';
 import { isStrongPassword, isValidEmail } from '../validation';
 
-const BCRYPT_ROUNDS = 12;
 const NAME_MAX_LENGTH = 50;
 const UNIQUE_VIOLATION = '23505';
 
@@ -36,7 +36,7 @@ usersRouter.post('/', async (req, res) => {
     const { rows } = await pool.query(
       `INSERT INTO users (email, password_hash, first_name, last_name)
        VALUES ($1, $2, $3, $4)
-       RETURNING id, email, first_name AS "firstName", last_name AS "lastName", role, created_at AS "createdAt"`,
+       RETURNING ${PUBLIC_USER_COLUMNS}`,
       [email, passwordHash, firstName, lastName],
     );
     res.status(201).json(rows[0]);
