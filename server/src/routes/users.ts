@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import { Router } from 'express';
 import { pool } from '../db';
 import { BCRYPT_ROUNDS, PUBLIC_USER_COLUMNS } from '../users';
-import { isStrongPassword, isValidEmail } from '../validation';
+import { isStrongPassword, isValidEmail, PASSWORD_RULES_MESSAGE } from '../validation';
 
 const NAME_MAX_LENGTH = 50;
 const UNIQUE_VIOLATION = '23505';
@@ -20,8 +20,7 @@ usersRouter.post('/', async (req, res) => {
   const errors: Record<string, string> = {};
   if (!isValidEmail(email)) errors.email = 'Enter a valid email address.';
   if (!isStrongPassword(password)) {
-    errors.password =
-      'Password must be 8-72 characters with an uppercase letter, a lowercase letter, a number and one of ! @ # $ % ^ & *.';
+    errors.password = PASSWORD_RULES_MESSAGE;
   }
   if (!firstName || firstName.length > NAME_MAX_LENGTH) errors.firstName = 'Enter your first name.';
   if (!lastName || lastName.length > NAME_MAX_LENGTH) errors.lastName = 'Enter your last name.';

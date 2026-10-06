@@ -5,6 +5,7 @@ import { recordFailedLogin } from '../lockout';
 import { requireAuth } from '../middleware/auth';
 import { createSession, deleteSession } from '../sessions';
 import { BCRYPT_ROUNDS, PUBLIC_USER_COLUMNS } from '../users';
+import { isStrongPassword, PASSWORD_RULES_MESSAGE } from '../validation';
 
 // Compared against when the email is unknown so response time does not reveal which emails exist
 const LOCKED_MESSAGE = 'Too many failed attempts. Try again in 30 minutes.';
@@ -59,4 +60,39 @@ authRouter.get('/me', requireAuth, (req, res) => {
 authRouter.post('/logout', requireAuth, async (req, res) => {
   await deleteSession(req.auth!.sessionId);
   res.status(204).end();
+});
+
+// REQ-3.1.7 password change
+authRouter.post('/change-password', requireAuth, async (req, res) => {
+  const body = req.body ?? {};
+  const currentPassword = typeof body.currentPassword === 'string' ? body.currentPassword : '';
+  const newPassword = typeof body.newPassword === 'string' ? body.newPassword : '';
+
+  if (!isStrongPassword(newPassword)) {
+    res.status(400).json({ errors: { newPassword: PASSWORD_RULES_MESSAGE } });
+    return;
+  }
+
+  const { rows } = await pool.query('SELECT password_hash FROM users WHERE id = $1', [
+    req.auth!.user.id,
+  ]);
+  if (!(await bcrypt.compare(currentPassword, rows[0].password_hash))) {
+    res.status(400).json({ errors: { currentPassword: 'Your current password is incorrect.' } });
+    return;
+  }
+  if (newPassword === currentPassword) {
+    res.status(400).json({ errors: { newPassword: 'Choose a password you are not using now.' } });
+    return;
+  }
+
+  await pool.query('UPDATE users SET password_hash = $2 WHERE id = $1', [
+    req.auth!.user.id,
+    await bcrypt.hash(newPassword, BCRYPT_ROUNDS),
+  ]);
+  // Other devices must log in again with the new password; this one stays logged in
+  await pool.query('DELETE FROM sessions WHERE user_id = $1 AND id <> $2', [
+    req.auth!.user.id,
+    req.auth!.sessionId,
+  ]);
+  res.json({ message: 'Password updated.' });
 });

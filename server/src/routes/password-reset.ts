@@ -4,7 +4,7 @@ import { pool } from '../db';
 import { sendPasswordResetEmail } from '../email';
 import { generateToken, hashToken } from '../tokens';
 import { BCRYPT_ROUNDS } from '../users';
-import { isStrongPassword, isValidEmail } from '../validation';
+import { isStrongPassword, isValidEmail, PASSWORD_RULES_MESSAGE } from '../validation';
 
 const RESET_LINK_BASE = 'littleiran://reset-password';
 const RESET_TOKEN_MINUTES = 60;
@@ -42,12 +42,7 @@ passwordResetRouter.post('/reset-password', async (req, res) => {
 
   // Checked before touching the token so a weak password does not use up the link
   if (!isStrongPassword(password)) {
-    res.status(400).json({
-      errors: {
-        password:
-          'Password must be 8-72 characters with an uppercase letter, a lowercase letter, a number and one of ! @ # $ % ^ & *.',
-      },
-    });
+    res.status(400).json({ errors: { password: PASSWORD_RULES_MESSAGE } });
     return;
   }
 
