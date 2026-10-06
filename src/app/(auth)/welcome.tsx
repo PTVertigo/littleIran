@@ -1,7 +1,9 @@
+import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PrimaryButton } from '@/components/primary-button';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -22,6 +24,10 @@ export default function WelcomeScreen() {
         <ThemedText themeColor="textSecondary" style={[styles.tagline, styles.centered]}>
           Discover Iranian businesses, events and community across Southern Ontario.
         </ThemedText>
+      </View>
+      <View style={styles.actions}>
+        <PrimaryButton title="Create account" onPress={() => router.push('/register')} />
+        <PrimaryButton title="Log in" variant="plain" onPress={() => router.push('/login')} />
       </View>
     </SafeAreaView>
   );
@@ -55,6 +61,9 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
+  },
+  actions: {
+    gap: Spacing.two,
   },
   centered: {
     textAlign: 'center',

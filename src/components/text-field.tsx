@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type Ref } from 'react';
 import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -6,11 +6,19 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type TextFieldProps = TextInputProps & {
+  ref?: Ref<TextInput>;
   label: string;
   error?: string;
 };
 
-export function TextField({ label, error, secureTextEntry, style, ...rest }: TextFieldProps) {
+export function TextField({
+  label,
+  error,
+  secureTextEntry,
+  style,
+  ref,
+  ...rest
+}: TextFieldProps) {
   const theme = useTheme();
   const [revealed, setRevealed] = useState(false);
 
@@ -26,6 +34,7 @@ export function TextField({ label, error, secureTextEntry, style, ...rest }: Tex
           },
         ]}>
         <TextInput
+          ref={ref}
           accessibilityLabel={label}
           placeholderTextColor={theme.textSecondary}
           secureTextEntry={secureTextEntry && !revealed}
