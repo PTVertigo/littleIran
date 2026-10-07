@@ -5,7 +5,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 type PrimaryButtonProps = Omit<PressableProps, 'children'> & {
   title: string;
-  variant?: 'filled' | 'plain';
+  variant?: 'filled' | 'plain' | 'destructive';
   loading?: boolean;
 };
 
@@ -20,7 +20,11 @@ export function PrimaryButton({
   const theme = useTheme();
   const inactive = disabled || loading;
   const filled = variant === 'filled';
-  const labelColor = filled ? theme.onPrimary : theme.primary;
+  const labelColor = filled
+    ? theme.onPrimary
+    : variant === 'destructive'
+      ? theme.error
+      : theme.primary;
 
   return (
     <Pressable

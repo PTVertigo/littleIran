@@ -37,6 +37,14 @@ function RootNavigator() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={state.status === 'signedIn'}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="change-password"
+            options={{
+              presentation: 'formSheet',
+              sheetAllowedDetents: [0.85, 1],
+              sheetGrabberVisible: true,
+            }}
+          />
         </Stack.Protected>
         <Stack.Protected guard={state.status === 'signedOut'}>
           <Stack.Screen name="(auth)" />

@@ -1,30 +1,47 @@
-import { StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView, StyleSheet } from 'react-native';
 
+import { FeatureCard } from '@/components/feature-card';
 import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 import { useSession } from '@/lib/session';
 
 export default function HomeScreen() {
-  const colors = useTheme();
   const { state } = useSession();
   const firstName = state.status === 'signedIn' ? state.user.firstName : '';
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
+    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
       <ThemedText type="largeTitle" accessibilityRole="header">
         Hello, {firstName}
       </ThemedText>
-    </SafeAreaView>
+      <ThemedText themeColor="textSecondary">
+        Your community in Southern Ontario is coming together. Here is what is on the way.
+      </ThemedText>
+
+      <FeatureCard
+        icon="storefront"
+        title="Businesses"
+        description="Find Iranian-owned restaurants, shops and services near you."
+      />
+      <FeatureCard
+        icon="calendar"
+        title="Events"
+        description="Festivals, workshops and gatherings from the community."
+      />
+      <FeatureCard
+        icon="bubble.left.and.bubble.right"
+        title="Forums"
+        description="Ask questions, share tips and meet your neighbours."
+      />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
+  content: {
     padding: Spacing.four,
-    paddingBottom: BottomTabInset + Spacing.three,
+    paddingTop: Spacing.six,
+    paddingBottom: BottomTabInset + Spacing.four,
     gap: Spacing.three,
   },
 });
