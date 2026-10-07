@@ -8,7 +8,11 @@
     "scheme": "littleiran",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": {
+        "light": "./assets/images/icon.png",
+        "dark": "./assets/images/icon-dark.png",
+        "tinted": "./assets/images/icon-tinted.png"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -28,9 +32,13 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#0B7A85",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 190,
+          "dark": {
+            "backgroundColor": "#000000",
+            "image": "./assets/images/splash-icon-dark.png"
+          }
         }
       ],
       "expo-secure-store"
