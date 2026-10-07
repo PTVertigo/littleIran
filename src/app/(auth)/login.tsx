@@ -1,4 +1,5 @@
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, TextInput } from 'react-native';
 
@@ -78,6 +79,11 @@ export default function LoginScreen() {
       />
 
       <PrimaryButton title="Log in" loading={loading} onPress={submit} />
+      <PrimaryButton
+        title="Forgot password?"
+        variant="plain"
+        onPress={() => router.push('/forgot-password')}
+      />
     </ScrollView>
   );
 }
