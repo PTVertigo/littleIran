@@ -160,7 +160,8 @@ main:focus {
   list-style: none;
 }
 
-.nav-list a {
+.nav-list a,
+.link-button {
   display: inline-block;
   padding: var(--space-2) 0;
   color: var(--text);
@@ -168,8 +169,16 @@ main:focus {
   font-weight: 500;
 }
 
+.link-button {
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
 .nav-list a:hover,
-.nav-list a.active {
+.nav-list a.active,
+.link-button:hover {
   color: var(--primary);
   text-decoration: underline;
   text-underline-offset: 6px;
@@ -203,6 +212,91 @@ main:focus {
 .button:disabled {
   opacity: 0.6;
   cursor: progress;
+}
+
+/* Forms */
+.form-page {
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+.muted {
+  color: var(--text-secondary);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field label {
+  font-weight: 600;
+}
+
+.field__control {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.field__control:focus-within {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.field__control:has([aria-invalid]) {
+  border-color: var(--error);
+}
+
+.field input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+
+/* The wrapper draws the focus ring for the input and the toggle together */
+.field input:focus-visible {
+  outline: none;
+}
+
+.field__toggle {
+  padding: 0 var(--space-3);
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.field__error {
+  margin: 0;
+  color: var(--error);
+  font-size: 0.875rem;
+}
+
+.error-banner {
+  padding: var(--space-3);
+  border: 1px solid var(--error);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--error);
 }
 
 /* Loading */
