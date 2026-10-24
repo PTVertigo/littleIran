@@ -17,14 +17,17 @@ cp .env.example .env
 npm install
 npm run migrate
 
-# 2. API on http://localhost:3000
-npm run dev
+# 2. Web app dependencies
+cd ../web
+npm install
 
-# 3. Web app on http://localhost:5173 (in another terminal; /api is proxied to the API)
-cd web
+# 3. From the repo root: API on http://localhost:3000 and web app on http://localhost:5173
+cd ..
 npm install
 npm run dev
 ```
+
+The web app proxies `/api` to the API, so open http://localhost:5173.
 
 ## Checks
 
