@@ -6,7 +6,7 @@ import { generateToken, hashToken } from '../tokens';
 import { BCRYPT_ROUNDS } from '../users';
 import { isStrongPassword, isValidEmail, PASSWORD_RULES_MESSAGE } from '../validation';
 
-const RESET_LINK_BASE = 'littleiran://reset-password';
+const RESET_LINK_BASE = `${process.env.APP_URL ?? 'http://localhost:5173'}/reset-password`;
 const RESET_TOKEN_MINUTES = 60;
 
 export const passwordResetRouter = Router();

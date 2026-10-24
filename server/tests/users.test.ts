@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import request from 'supertest';
+import { browser } from './browser';
 import { createApp } from '../src/app';
 import { pool } from '../src/db';
 
@@ -22,7 +22,7 @@ afterAll(async () => {
 // API-001 (REQ-3.1.1, 4.1.2)
 describe('POST /api/users', () => {
   it('registers a user and never returns the password', async () => {
-    const res = await request(app).post('/api/users').send(validBody);
+    const res = await browser(app).post('/api/users').send(validBody);
 
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({
@@ -36,7 +36,7 @@ describe('POST /api/users', () => {
 
   // UT-001 (REQ-4.1.2)
   it('stores a bcrypt hash instead of the plaintext password', async () => {
-    await request(app).post('/api/users').send(validBody);
+    await browser(app).post('/api/users').send(validBody);
 
     const { rows } = await pool.query('SELECT password_hash FROM users');
     expect(rows[0].password_hash).not.toBe(validBody.password);
@@ -45,9 +45,8 @@ describe('POST /api/users', () => {
 
   // REQ-3.1.2
   it('rejects an email that is already registered, ignoring case', async () => {
-    await request(app).post('/api/users').send(validBody);
-    const res = await request(app)
-      .post('/api/users')
+    await browser(app).post('/api/users').send(validBody);
+    const res = await browser(app).post('/api/users')
       .send({ ...validBody, email: 'TEST@domain.COM' });
 
     expect(res.status).toBe(409);
@@ -55,8 +54,7 @@ describe('POST /api/users', () => {
   });
 
   it('reports every invalid field at once', async () => {
-    const res = await request(app)
-      .post('/api/users')
+    const res = await browser(app).post('/api/users')
       .send({ email: 'nope', password: 'weak', firstName: ' ', lastName: '' });
 
     expect(res.status).toBe(400);
@@ -69,13 +67,12 @@ describe('POST /api/users', () => {
   });
 
   it('rejects a request with no body', async () => {
-    const res = await request(app).post('/api/users');
+    const res = await browser(app).post('/api/users');
     expect(res.status).toBe(400);
   });
 
   it('answers malformed JSON with a plain error and no internals', async () => {
-    const res = await request(app)
-      .post('/api/users')
+    const res = await browser(app).post('/api/users')
       .set('Content-Type', 'application/json')
       .send('{"email":');
 

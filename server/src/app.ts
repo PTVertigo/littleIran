@@ -1,4 +1,6 @@
+import cookieParser from 'cookie-parser';
 import express, { type ErrorRequestHandler } from 'express';
+import { csrfProtection } from './middleware/csrf';
 import { authRouter } from './routes/auth';
 import { passwordResetRouter } from './routes/password-reset';
 import { usersRouter } from './routes/users';
@@ -15,6 +17,8 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
 
 export function createApp() {
   const app = express();
+  app.use(cookieParser());
+  app.use('/api', csrfProtection);
   app.use(express.json());
 
   app.get('/api/health', (_req, res) => {

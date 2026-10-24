@@ -1,4 +1,4 @@
-import request from 'supertest';
+import { browser, sessionToken } from './browser';
 import { createApp } from '../src/app';
 import { pool } from '../src/db';
 
@@ -7,21 +7,17 @@ const credentials = { email: 'test@test.com', password: 'Test123@' };
 const newPassword = 'Fresh456#';
 
 const login = (password: string) =>
-  request(app).post('/api/auth/login').send({ email: credentials.email, password });
+  browser(app).post('/api/auth/login').send({ email: credentials.email, password });
 const change = (token: string | undefined, body: object) =>
-  request(app)
-    .post('/api/auth/change-password')
-    .set(token ? { Authorization: `Bearer ${token}` } : {})
-    .send(body);
+  browser(app, token).post('/api/auth/change-password').send(body);
 
 let token: string;
 
 beforeEach(async () => {
   await pool.query('TRUNCATE users RESTART IDENTITY CASCADE');
-  await request(app)
-    .post('/api/users')
+  await browser(app).post('/api/users')
     .send({ ...credentials, firstName: 'Sara', lastName: 'Ahmadi' });
-  token = (await login(credentials.password)).body.token;
+  token = sessionToken(await login(credentials.password))!;
 });
 
 afterAll(async () => {
@@ -72,11 +68,11 @@ describe('POST /api/auth/change-password', () => {
   });
 
   it('keeps this session and ends the user\'s other sessions', async () => {
-    const otherDevice = (await login(credentials.password)).body.token;
+    const otherDevice = sessionToken(await login(credentials.password))!;
 
     await change(token, { currentPassword: credentials.password, newPassword });
 
-    const get = (t: string) => request(app).get('/api/auth/me').set('Authorization', `Bearer ${t}`);
+    const get = (t: string) => browser(app, t).get('/api/auth/me');
     expect((await get(token)).status).toBe(200);
     expect((await get(otherDevice)).status).toBe(401);
   });

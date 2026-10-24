@@ -1,4 +1,4 @@
-import request from 'supertest';
+import { browser } from './browser';
 import { createApp } from '../src/app';
 import { pool } from '../src/db';
 
@@ -6,7 +6,7 @@ const app = createApp();
 const credentials = { email: 'test@test.com', password: 'Test123@' };
 const wrong = { ...credentials, password: 'Wrong123@' };
 
-const login = (body: object) => request(app).post('/api/auth/login').send(body);
+const login = (body: object) => browser(app).post('/api/auth/login').send(body);
 
 async function failTimes(n: number) {
   for (let i = 0; i < n; i++) await login(wrong);
@@ -18,8 +18,7 @@ beforeAll(() => {
 
 beforeEach(async () => {
   await pool.query('TRUNCATE users RESTART IDENTITY CASCADE');
-  await request(app)
-    .post('/api/users')
+  await browser(app).post('/api/users')
     .send({ ...credentials, firstName: 'Sara', lastName: 'Ahmadi' });
 });
 
@@ -91,8 +90,7 @@ describe('account lockout', () => {
   });
 
   it('counts failures per account, not per request source', async () => {
-    await request(app)
-      .post('/api/users')
+    await browser(app).post('/api/users')
       .send({ email: 'other@test.com', password: 'Test123@', firstName: 'Ali', lastName: 'Rad' });
     await failTimes(5);
 

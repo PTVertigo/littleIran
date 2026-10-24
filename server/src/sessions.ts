@@ -23,16 +23,16 @@ export async function touchSession(token: string) {
        UPDATE sessions
        SET expires_at = now() + make_interval(secs => $2)
        WHERE token_hash = $1 AND expires_at > now()
-       RETURNING id AS session_id, user_id
+       RETURNING id AS session_id, user_id, expires_at
      )
-     SELECT t.session_id AS "sessionId", ${PUBLIC_USER_COLUMNS}
+     SELECT t.session_id AS "sessionId", t.expires_at AS "sessionExpiresAt", ${PUBLIC_USER_COLUMNS}
      FROM touched t JOIN users ON users.id = t.user_id`,
     [hashToken(token), SESSION_LIFETIME_SECONDS],
   );
   if (!rows[0]) return null;
 
-  const { sessionId, ...user } = rows[0];
-  return { sessionId: sessionId as string, user };
+  const { sessionId, sessionExpiresAt, ...user } = rows[0];
+  return { sessionId: sessionId as string, expiresAt: sessionExpiresAt as Date, user };
 }
 
 export async function deleteSession(sessionId: string) {

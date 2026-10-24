@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import { Router } from 'express';
+import { clearSessionCookie, setSessionCookie } from '../cookies';
 import { pool } from '../db';
 import { recordFailedLogin } from '../lockout';
 import { requireAuth } from '../middleware/auth';
@@ -49,7 +50,8 @@ authRouter.post('/login', async (req, res) => {
      WHERE id = $1`,
     [user.id],
   );
-  res.json({ token: session.token, expiresAt: session.expiresAt, user });
+  setSessionCookie(res, session.token, session.expiresAt);
+  res.json({ expiresAt: session.expiresAt, user });
 });
 
 authRouter.get('/me', requireAuth, (req, res) => {
@@ -59,6 +61,7 @@ authRouter.get('/me', requireAuth, (req, res) => {
 // REQ-3.1.8 logout
 authRouter.post('/logout', requireAuth, async (req, res) => {
   await deleteSession(req.auth!.sessionId);
+  clearSessionCookie(res);
   res.status(204).end();
 });
 

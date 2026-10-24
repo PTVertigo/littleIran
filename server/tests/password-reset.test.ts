@@ -1,4 +1,4 @@
-import request from 'supertest';
+import { browser, sessionToken } from './browser';
 import { createApp } from '../src/app';
 import { pool } from '../src/db';
 import { sendPasswordResetEmail } from '../src/email';
@@ -11,11 +11,11 @@ const credentials = { email: 'test@test.com', password: 'Test123@' };
 const newPassword = 'Fresh456#';
 
 const mockedSend = jest.mocked(sendPasswordResetEmail);
-const forgot = (email: string) => request(app).post('/api/auth/forgot-password').send({ email });
+const forgot = (email: string) => browser(app).post('/api/auth/forgot-password').send({ email });
 const reset = (token: string, password = newPassword) =>
-  request(app).post('/api/auth/reset-password').send({ token, password });
+  browser(app).post('/api/auth/reset-password').send({ token, password });
 const login = (password: string) =>
-  request(app).post('/api/auth/login').send({ email: credentials.email, password });
+  browser(app).post('/api/auth/login').send({ email: credentials.email, password });
 
 // Pulls the token out of the link the mocked email sender received
 async function requestResetToken() {
@@ -27,8 +27,7 @@ async function requestResetToken() {
 beforeEach(async () => {
   mockedSend.mockClear();
   await pool.query('TRUNCATE users RESTART IDENTITY CASCADE');
-  await request(app)
-    .post('/api/users')
+  await browser(app).post('/api/users')
     .send({ ...credentials, firstName: 'Sara', lastName: 'Ahmadi' });
 });
 
@@ -38,14 +37,14 @@ afterAll(async () => {
 
 // REQ-3.1.6
 describe('POST /api/auth/forgot-password', () => {
-  it('emails a deep link to a registered address and stores only the token hash', async () => {
+  it('emails a web app link to a registered address and stores only the token hash', async () => {
     const res = await forgot('Test@Test.com');
 
     expect(res.status).toBe(202);
     expect(mockedSend).toHaveBeenCalledTimes(1);
     const [to, link] = mockedSend.mock.calls[0];
     expect(to).toBe('test@test.com');
-    expect(link).toMatch(/^littleiran:\/\/reset-password\?token=[0-9a-f]{64}$/);
+    expect(link).toMatch(/^http:\/\/localhost:5173\/reset-password\?token=[0-9a-f]{64}$/);
 
     const token = new URL(link).searchParams.get('token')!;
     const { rows } = await pool.query('SELECT reset_token_hash FROM users');
@@ -119,12 +118,12 @@ describe('POST /api/auth/reset-password', () => {
   });
 
   it('logs out every existing session', async () => {
-    const session = (await login(credentials.password)).body.token;
+    const session = sessionToken(await login(credentials.password))!;
     const token = await requestResetToken();
 
     await reset(token);
 
-    const me = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${session}`);
+    const me = await browser(app, session).get('/api/auth/me');
     expect(me.status).toBe(401);
   });
 
