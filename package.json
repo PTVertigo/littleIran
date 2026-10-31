@@ -4,9 +4,12 @@
   "scripts": {
     "dev": "concurrently --names api,web --prefix-colors blue,magenta \"npm --prefix server run dev\" \"npm --prefix web run dev\"",
     "test": "npm --prefix server test && npm --prefix web test",
+    "cy:open": "env -u ELECTRON_RUN_AS_NODE cypress open --project web",
+    "cy:run": "env -u ELECTRON_RUN_AS_NODE cypress run --project web",
     "typecheck": "npm --prefix server run typecheck && npm --prefix web run typecheck"
   },
   "devDependencies": {
-    "concurrently": "^10.0.6"
+    "concurrently": "^10.0.6",
+    "cypress": "^16.2.1"
   }
 }
