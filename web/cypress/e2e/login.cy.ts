@@ -52,6 +52,17 @@ describe('Login', () => {
     cy.contains('h1', 'Welcome, Test');
   });
 
+  // REQ-3.1.5 a tab left open notices that its session ended
+  it('sends the visitor to the login page when the session ends in another tab', () => {
+    logIn('test@test.com', 'Test123@');
+    cy.location('pathname').should('eq', '/dashboard');
+
+    cy.clearCookie('sid');
+    cy.document().then((doc) => doc.dispatchEvent(new Event('visibilitychange')));
+
+    cy.location('pathname').should('eq', '/login');
+  });
+
   // REQ-3.1.8
   it('logs out and sends the visitor back to the login page', () => {
     logIn('test@test.com', 'Test123@');

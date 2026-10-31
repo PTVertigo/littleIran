@@ -25,6 +25,24 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       });
   }, []);
 
+  // REQ-3.1.5 a tab left open can outlive its session (expiry, or a password reset ending every session).
+  // Checking when the tab comes back into view notices that, and the check itself counts as activity.
+  const signedIn = state.status === 'signedIn';
+  useEffect(() => {
+    if (!signedIn) return;
+    function recheck() {
+      if (document.visibilityState !== 'visible') return;
+      apiRequest<{ user: User }>('/api/auth/me')
+        .then(({ user }) => setState({ status: 'signedIn', user }))
+        .catch((err) => {
+          // Only a definite 401 ends the session here; being offline must not log anyone out
+          if (err instanceof ApiError && err.status === 401) setState({ status: 'signedOut' });
+        });
+    }
+    document.addEventListener('visibilitychange', recheck);
+    return () => document.removeEventListener('visibilitychange', recheck);
+  }, [signedIn]);
+
   // REQ-3.1.4 the server sets the session cookie; only the user comes back in the body
   const signIn = useCallback(async (email: string, password: string) => {
     const { user } = await apiRequest<{ user: User }>('/api/auth/login', {
