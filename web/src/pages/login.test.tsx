@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { mockFetch, renderApp } from '../test/render';
@@ -91,6 +91,33 @@ describe('Login page', () => {
     await fillAndSubmit('test@test.com', 'Wrong123@');
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/try again in 30 minutes/i);
+  });
+
+  // REQ-3.1.9 the page just relays what the server decides, attempt after attempt
+  it('shows Invalid credentials until the server locks the account, then keeps refusing', async () => {
+    const locked = { status: 423, body: { error: 'Too many failed attempts. Try again in 30 minutes.' } };
+    const invalid = { status: 401, body: { error: 'Invalid credentials' } };
+    mockFetch(signedOut, invalid, invalid, locked, locked);
+    renderApp('/login');
+    await screen.findByRole('heading', { name: 'Log in' });
+    await userEvent.type(screen.getByLabelText('Email'), 'test@test.com');
+    await userEvent.type(screen.getByLabelText('Password'), 'Wrong123@');
+    const submitButton = screen.getByRole('button', { name: 'Log in' });
+
+    await userEvent.click(submitButton);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid credentials');
+    await userEvent.click(submitButton);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid credentials');
+
+    await userEvent.click(submitButton);
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/try again in 30 minutes/i));
+
+    // Even the right password is refused while locked
+    await userEvent.clear(screen.getByLabelText('Password'));
+    await userEvent.type(screen.getByLabelText('Password'), 'Test123@');
+    await userEvent.click(submitButton);
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/try again in 30 minutes/i));
+    expect(screen.getByRole('heading', { name: 'Log in' })).toBeVisible();
   });
 
   // REQ-4.1.7 client-side check before anything is sent
