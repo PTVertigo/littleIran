@@ -2,6 +2,7 @@ import type { RouteObject } from 'react-router';
 
 import { Layout } from './components/layout';
 import { GuestOnly, RequireAuth } from './components/route-guards';
+import { ChangePasswordPage } from './pages/change-password';
 import { DashboardPage } from './pages/dashboard';
 import { ErrorPage } from './pages/error';
 import { ForgotPasswordPage } from './pages/forgot-password';
@@ -29,7 +30,13 @@ export const routes: RouteObject[] = [
           },
           // Open to anyone holding the emailed link, logged in or not
           { path: 'reset-password', element: <ResetPasswordPage /> },
-          { element: <RequireAuth />, children: [{ path: 'dashboard', element: <DashboardPage /> }] },
+          {
+            element: <RequireAuth />,
+            children: [
+              { path: 'dashboard', element: <DashboardPage /> },
+              { path: 'change-password', element: <ChangePasswordPage /> },
+            ],
+          },
           { path: '*', element: <ErrorPage /> },
         ],
       },

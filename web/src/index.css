@@ -301,6 +301,15 @@ main:focus {
   font-size: 0.875rem;
 }
 
+.success-banner {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+}
+
 .error-banner {
   padding: var(--space-3);
   border: 1px solid var(--error);
