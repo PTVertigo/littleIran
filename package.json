@@ -1,43 +1,18 @@
 {
   "name": "littleiran",
-  "main": "expo-router/entry",
-  "version": "1.0.0",
-  "dependencies": {
-    "@expo/ui": "~57.0.21",
-    "expo": "~57.0.26",
-    "expo-constants": "~57.0.20",
-    "expo-device": "~57.0.2",
-    "expo-font": "~57.0.4",
-    "expo-glass-effect": "~57.0.4",
-    "expo-image": "~57.0.5",
-    "expo-linking": "~57.0.11",
-    "expo-router": "~57.0.24",
-    "expo-splash-screen": "~57.0.9",
-    "expo-status-bar": "~57.0.1",
-    "expo-symbols": "~57.0.3",
-    "expo-system-ui": "~57.0.4",
-    "expo-web-browser": "~57.0.3",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-native": "0.86.3",
-    "react-native-gesture-handler": "~2.32.0",
-    "react-native-reanimated": "4.5.1",
-    "react-native-safe-area-context": "~5.7.0",
-    "react-native-screens": "~4.26.0",
-    "react-native-web": "~0.21.0",
-    "react-native-worklets": "0.10.1"
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --names api,web --prefix-colors blue,magenta \"npm --prefix server run dev\" \"npm --prefix web run dev\"",
+    "build": "npm --prefix web ci --include=dev && npm --prefix web run build && npm --prefix server ci",
+    "start": "npm --prefix server run migrate && npm --prefix server start",
+    "test": "npm --prefix server test && npm --prefix web test",
+    "cy:open": "env -u ELECTRON_RUN_AS_NODE cypress open --project web",
+    "cy:run": "env -u ELECTRON_RUN_AS_NODE cypress run --project web",
+    "typecheck": "npm --prefix server run typecheck && npm --prefix web run typecheck"
   },
   "devDependencies": {
-    "@types/react": "~19.2.2",
-    "typescript": "~6.0.3"
-  },
-  "scripts": {
-    "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
-    "lint": "expo lint"
-  },
-  "private": true
+    "axe-core": "^4.14.0",
+    "concurrently": "^10.0.6",
+    "cypress": "^16.2.1"
+  }
 }
