@@ -3,6 +3,8 @@
   "private": true,
   "scripts": {
     "dev": "concurrently --names api,web --prefix-colors blue,magenta \"npm --prefix server run dev\" \"npm --prefix web run dev\"",
+    "build": "npm --prefix web ci --include=dev && npm --prefix web run build && npm --prefix server ci",
+    "start": "npm --prefix server run migrate && npm --prefix server start",
     "test": "npm --prefix server test && npm --prefix web test",
     "cy:open": "env -u ELECTRON_RUN_AS_NODE cypress open --project web",
     "cy:run": "env -u ELECTRON_RUN_AS_NODE cypress run --project web",

@@ -1,4 +1,5 @@
 import cookieParser from 'cookie-parser';
+import path from 'node:path';
 import express, { type ErrorRequestHandler } from 'express';
 import { csrfProtection } from './middleware/csrf';
 import { securityHeaders } from './middleware/security-headers';
@@ -16,7 +17,9 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   res.status(500).json({ error: 'Something went wrong. Please try again.' });
 };
 
-export function createApp() {
+// webDist is the built web app. It is only served in production, where Express is the one web service
+// for both the API and the pages, which keeps the session cookies same-origin.
+export function createApp({ webDist }: { webDist?: string } = {}) {
   const app = express();
   // REQ-4.2 do not advertise the framework
   app.disable('x-powered-by');
@@ -31,6 +34,18 @@ export function createApp() {
   app.use('/api/users', usersRouter);
   app.use('/api/auth', authRouter);
   app.use('/api/auth', passwordResetRouter);
+
+  if (webDist) {
+    app.use(express.static(webDist));
+    // Reloading or sharing a page address such as /login must still open the app, but a wrong API address is not a page
+    app.get('/{*splat}', (req, res, next) => {
+      if (req.path.startsWith('/api')) {
+        next();
+        return;
+      }
+      res.sendFile(path.join(webDist, 'index.html'));
+    });
+  }
 
   app.use(errorHandler);
   return app;
