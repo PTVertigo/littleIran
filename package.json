@@ -9,6 +9,7 @@
     "typecheck": "npm --prefix server run typecheck && npm --prefix web run typecheck"
   },
   "devDependencies": {
+    "axe-core": "^4.14.0",
     "concurrently": "^10.0.6",
     "cypress": "^16.2.1"
   }
