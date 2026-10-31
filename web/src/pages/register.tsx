@@ -6,7 +6,7 @@ import { AFTER_LOGIN_PATH } from '../components/route-guards';
 import { TextField } from '../components/text-field';
 import { ApiError, apiRequest } from '../lib/api';
 import { useSession } from '../lib/session';
-import { isValidEmail } from '../lib/validation';
+import { isStrongPassword, isValidEmail, PASSWORD_RULES_MESSAGE } from '../lib/validation';
 
 type Field = 'firstName' | 'lastName' | 'email' | 'password';
 type FieldErrors = Partial<Record<Field, string>>;
@@ -18,7 +18,7 @@ const REQUIRED: Record<Field, string> = {
   password: 'Enter a password.',
 };
 
-// Screen: registration. REQ-3.1.1 email, password, first name and last name; REQ-3.1.2 email checks
+// Screen: registration. REQ-3.1.1 email, password, first name and last name; REQ-3.1.2 email checks; REQ-3.1.3 password rules
 export function RegisterPage() {
   const { signIn } = useSession();
   const navigate = useNavigate();
@@ -56,6 +56,8 @@ export function RegisterPage() {
     }
     // REQ-3.1.2 a well-formed address; whether it is already taken only the server can say
     if (trimmed.email && !isValidEmail(trimmed.email)) missing.email = 'Enter a valid email address.';
+    // REQ-3.1.3 the same password rules the server enforces
+    if (trimmed.password && !isStrongPassword(trimmed.password)) missing.password = PASSWORD_RULES_MESSAGE;
     setFieldErrors(missing);
     setError('');
     if (Object.keys(missing).length > 0) return;
@@ -92,7 +94,13 @@ export function RegisterPage() {
         <TextField label="First name" autoComplete="given-name" {...bind('firstName')} />
         <TextField label="Last name" autoComplete="family-name" {...bind('lastName')} />
         <TextField label="Email" type="email" autoComplete="email" {...bind('email')} />
-        <TextField label="Password" type="password" autoComplete="new-password" {...bind('password')} />
+        <TextField
+          label="Password"
+          type="password"
+          autoComplete="new-password"
+          hint={PASSWORD_RULES_MESSAGE}
+          {...bind('password')}
+        />
         <button type="submit" className="button" disabled={loading}>
           {loading ? 'Creating account…' : 'Create account'}
         </button>

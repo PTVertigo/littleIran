@@ -289,6 +289,12 @@ main:focus {
   margin-top: var(--space-4);
 }
 
+.field__hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
 .field__error {
   margin: 0;
   color: var(--error);

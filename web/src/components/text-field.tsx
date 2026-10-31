@@ -3,12 +3,15 @@ import { useId, useState, type InputHTMLAttributes } from 'react';
 type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> & {
   label: string;
   error?: string;
+  hint?: string;
 };
 
-// A labelled input whose error is announced and tied to it; password fields get a show/hide toggle
-export function TextField({ label, error, type = 'text', ...rest }: TextFieldProps) {
+// A labelled input whose hint and error are announced and tied to it; password fields get a show/hide toggle
+export function TextField({ label, error, hint, type = 'text', ...rest }: TextFieldProps) {
   const id = useId();
   const errorId = `${id}-error`;
+  const hintId = `${id}-hint`;
+  const describedBy = [hint && hintId, error && errorId].filter(Boolean).join(' ');
   const [revealed, setRevealed] = useState(false);
   const isPassword = type === 'password';
 
@@ -20,7 +23,7 @@ export function TextField({ label, error, type = 'text', ...rest }: TextFieldPro
           id={id}
           type={isPassword && revealed ? 'text' : type}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
+          aria-describedby={describedBy || undefined}
           {...rest}
         />
         {isPassword && (
@@ -34,6 +37,11 @@ export function TextField({ label, error, type = 'text', ...rest }: TextFieldPro
           </button>
         )}
       </div>
+      {hint && (
+        <p id={hintId} className="field__hint">
+          {hint}
+        </p>
+      )}
       {error && (
         <p id={errorId} className="field__error">
           {error}

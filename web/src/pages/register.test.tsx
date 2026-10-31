@@ -63,7 +63,30 @@ describe('Register page', () => {
     expect(screen.getByLabelText('First name')).toHaveAccessibleDescription('Enter your first name.');
     expect(screen.getByLabelText('Last name')).toHaveAccessibleDescription('Enter your last name.');
     expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Enter your email address.');
-    expect(screen.getByLabelText('Password')).toHaveAccessibleDescription('Enter a password.');
+    expect(screen.getByLabelText('Password')).toHaveAccessibleDescription(/Enter a password\.$/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  // REQ-3.1.3
+  it('states the password rules next to the field', async () => {
+    mockFetch(signedOut);
+    renderApp('/register');
+    await screen.findByRole('heading', { name: 'Create an account' });
+
+    expect(screen.getByLabelText('Password')).toHaveAccessibleDescription(/8-72 characters/);
+  });
+
+  // REQ-3.1.3
+  it('rejects a weak password without calling the server and keeps the rules visible', async () => {
+    const fetchMock = mockFetch(signedOut);
+    renderApp('/register');
+
+    await fillForm({ Password: 'weak' });
+    await submit();
+
+    const password = screen.getByLabelText('Password');
+    expect(password).toBeInvalid();
+    expect(password).toHaveAccessibleDescription(/8-72 characters.*8-72 characters/);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
