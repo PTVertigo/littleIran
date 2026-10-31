@@ -21,9 +21,14 @@ npm-debug.*
 .env
 .env*.local
 
-# local agent tooling and private planning docs
-.agents/
+# typescript
+*.tsbuildinfo
+
+example
+
+# generated native folders
+/ios
+/android
+
+# Claude Code
 .claude/
-skills-lock.json
-planning.md
-Milestone_4-3.pdf
