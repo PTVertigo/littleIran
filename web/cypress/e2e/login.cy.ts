@@ -69,8 +69,27 @@ describe('Login', () => {
     cy.location('pathname').should('eq', '/dashboard');
 
     cy.contains('button', 'Log out').click();
+    cy.location('pathname').should('eq', '/');
     cy.visit('/dashboard');
 
     cy.location('pathname').should('eq', '/login');
+  });
+
+  // REQ-3.1.8 logging out ends the session on the server, not just in the browser
+  it('makes the old session cookie useless after logout', () => {
+    logIn('test@test.com', 'Test123@');
+    cy.location('pathname').should('eq', '/dashboard');
+    cy.getCookie('sid').then((session) => {
+      cy.contains('button', 'Log out').click();
+      cy.location('pathname').should('eq', '/');
+
+      cy.request({
+        url: '/api/auth/me',
+        headers: { Cookie: `sid=${session!.value}` },
+        failOnStatusCode: false,
+      })
+        .its('status')
+        .should('eq', 401);
+    });
   });
 });

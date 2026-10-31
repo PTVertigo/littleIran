@@ -163,6 +163,41 @@ describe('Logging out', () => {
     expect(router.state.location.pathname).toBe('/');
   });
 
+  it('works from any page that needs a login and lands on the home page', async () => {
+    mockFetch(loggedIn, { status: 204 });
+    const router = renderApp('/change-password');
+    const nav = within(await screen.findByRole('navigation', { name: 'Main' }));
+
+    await userEvent.click(await nav.findByRole('button', { name: 'Log out' }));
+
+    expect(await screen.findByRole('heading', { name: 'LittleIran' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/');
+  });
+
+  it('locks the pages that need a login again', async () => {
+    mockFetch(loggedIn, { status: 204 });
+    const router = renderApp('/dashboard');
+    const nav = within(await screen.findByRole('navigation', { name: 'Main' }));
+    await userEvent.click(await nav.findByRole('button', { name: 'Log out' }));
+    await nav.findByRole('link', { name: 'Log in' });
+
+    await router.navigate('/dashboard');
+
+    expect(await screen.findByRole('heading', { name: 'Log in' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/login');
+  });
+
+  it('still logs out here when the server says the session had already ended', async () => {
+    mockFetch(loggedIn, signedOut);
+    renderApp('/dashboard');
+    const nav = within(await screen.findByRole('navigation', { name: 'Main' }));
+
+    await userEvent.click(await nav.findByRole('button', { name: 'Log out' }));
+
+    expect(await nav.findByRole('link', { name: 'Log in' })).toBeVisible();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('stays logged in and says so when the server cannot be reached', async () => {
     mockFetch(loggedIn).mockRejectedValueOnce(new TypeError('Failed to fetch'));
     renderApp('/dashboard');
