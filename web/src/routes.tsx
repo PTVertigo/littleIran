@@ -4,9 +4,11 @@ import { Layout } from './components/layout';
 import { GuestOnly, RequireAuth } from './components/route-guards';
 import { DashboardPage } from './pages/dashboard';
 import { ErrorPage } from './pages/error';
+import { ForgotPasswordPage } from './pages/forgot-password';
 import { HomePage } from './pages/home';
 import { LoginPage } from './pages/login';
 import { RegisterPage } from './pages/register';
+import { ResetPasswordPage } from './pages/reset-password';
 
 export const routes: RouteObject[] = [
   {
@@ -22,8 +24,11 @@ export const routes: RouteObject[] = [
             children: [
               { path: 'login', element: <LoginPage /> },
               { path: 'register', element: <RegisterPage /> },
+              { path: 'forgot-password', element: <ForgotPasswordPage /> },
             ],
           },
+          // Open to anyone holding the emailed link, logged in or not
+          { path: 'reset-password', element: <ResetPasswordPage /> },
           { element: <RequireAuth />, children: [{ path: 'dashboard', element: <DashboardPage /> }] },
           { path: '*', element: <ErrorPage /> },
         ],

@@ -64,6 +64,9 @@ export function LoginPage() {
       </form>
 
       <p className="form-footer">
+        <Link to="/forgot-password">Forgot your password?</Link>
+      </p>
+      <p>
         New to LittleIran? <Link to="/register">Create an account</Link>
       </p>
     </section>
