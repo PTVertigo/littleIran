@@ -40,6 +40,30 @@ describe('Security headers', () => {
     expect(res.headers['cache-control']).toBe('no-store');
   });
 
+  // SEC-003 (REQ-4.1.5)
+  describe('HTTPS only', () => {
+    const original = process.env.NODE_ENV;
+    afterEach(() => {
+      process.env.NODE_ENV = original;
+    });
+
+    it('tells browsers to use HTTPS for the next year when running in production', async () => {
+      process.env.NODE_ENV = 'production';
+
+      const res = await request(app).get('/api/health');
+
+      expect(res.headers['strict-transport-security']).toBe('max-age=31536000');
+    });
+
+    it('stays off in development, which runs on plain http', async () => {
+      process.env.NODE_ENV = 'development';
+
+      const res = await request(app).get('/api/health');
+
+      expect(res.headers['strict-transport-security']).toBeUndefined();
+    });
+  });
+
   it('sets the headers on error responses too', async () => {
     const res = await request(app).post('/api/users').set('Content-Type', 'application/json').send('{bad');
 
