@@ -6,6 +6,7 @@ import { AFTER_LOGIN_PATH } from '../components/route-guards';
 import { TextField } from '../components/text-field';
 import { ApiError, apiRequest } from '../lib/api';
 import { useSession } from '../lib/session';
+import { isValidEmail } from '../lib/validation';
 
 type Field = 'firstName' | 'lastName' | 'email' | 'password';
 type FieldErrors = Partial<Record<Field, string>>;
@@ -17,7 +18,7 @@ const REQUIRED: Record<Field, string> = {
   password: 'Enter a password.',
 };
 
-// Screen: registration. REQ-3.1.1 email, password, first name and last name
+// Screen: registration. REQ-3.1.1 email, password, first name and last name; REQ-3.1.2 email checks
 export function RegisterPage() {
   const { signIn } = useSession();
   const navigate = useNavigate();
@@ -53,6 +54,8 @@ export function RegisterPage() {
     for (const field of Object.keys(REQUIRED) as Field[]) {
       if (!trimmed[field]) missing[field] = REQUIRED[field];
     }
+    // REQ-3.1.2 a well-formed address; whether it is already taken only the server can say
+    if (trimmed.email && !isValidEmail(trimmed.email)) missing.email = 'Enter a valid email address.';
     setFieldErrors(missing);
     setError('');
     if (Object.keys(missing).length > 0) return;

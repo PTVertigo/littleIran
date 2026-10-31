@@ -67,6 +67,38 @@ describe('Register page', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  // REQ-3.1.2
+  it('rejects a malformed email without calling the server', async () => {
+    const fetchMock = mockFetch(signedOut);
+    renderApp('/register');
+
+    await fillForm({ Email: 'test@invalid' });
+    await submit();
+
+    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Enter a valid email address.');
+    expect(screen.getByLabelText('Email')).toBeInvalid();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  // REQ-3.1.2
+  it('says so under the email field when the address is already registered', async () => {
+    mockFetch(signedOut, {
+      status: 409,
+      body: { errors: { email: 'That email is already registered.' } },
+    });
+    const router = renderApp('/register');
+
+    await fillForm();
+    await submit();
+
+    expect(await screen.findByLabelText('Email')).toHaveAccessibleDescription(
+      'That email is already registered.',
+    );
+    expect(screen.getByLabelText('Email')).toBeInvalid();
+    expect(router.state.location.pathname).toBe('/register');
+    expect(screen.getByRole('button', { name: 'Create account' })).toBeEnabled();
+  });
+
   it('shows the server\'s message under the field it belongs to and keeps what was typed', async () => {
     mockFetch(signedOut, { status: 400, body: { errors: { firstName: 'Enter your first name.' } } });
     const router = renderApp('/register');
