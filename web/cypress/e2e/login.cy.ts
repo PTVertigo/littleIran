@@ -24,6 +24,24 @@ describe('Login', () => {
     cy.location('pathname').should('eq', '/login');
   });
 
+  // REQ-3.1.4 an unregistered email gets the same answer as a wrong password
+  it('shows Invalid credentials for an unknown email', () => {
+    logIn('nobody@example.com', 'Test123@');
+
+    cy.get('[role="alert"]').should('contain', 'Invalid credentials');
+    cy.location('pathname').should('eq', '/login');
+  });
+
+  // REQ-3.1.4
+  it('asks for both fields without sending anything', () => {
+    cy.intercept('POST', '/api/auth/login').as('login');
+    cy.visit('/login');
+    cy.contains('button', 'Log in').click();
+
+    cy.get('[role="alert"]').should('contain', 'Enter your email and password.');
+    cy.get('@login.all').should('have.length', 0);
+  });
+
   // REQ-3.1.5 the session cookie keeps a returning visitor logged in
   it('stays logged in after a reload', () => {
     logIn('test@test.com', 'Test123@');

@@ -49,6 +49,37 @@ describe('Login page', () => {
     expect(screen.getByRole('button', { name: 'Log in' })).toBeEnabled();
   });
 
+  // REQ-3.1.4 the page never reveals whether an email is registered
+  it('shows the same message for an unknown email as for a wrong password', async () => {
+    mockFetch(signedOut, { status: 401, body: { error: 'Invalid credentials' } });
+    renderApp('/login');
+
+    await fillAndSubmit('nobody@example.com', 'Test123@');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid credentials');
+  });
+
+  it('trims spaces around the email before sending it', async () => {
+    const fetchMock = mockFetch(signedOut, loggedIn);
+    renderApp('/login');
+
+    await fillAndSubmit('  test@test.com ', 'Test123@');
+
+    await screen.findByRole('heading', { name: 'Welcome, Sara' });
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).email).toBe('test@test.com');
+  });
+
+  it('explains an unreachable server and keeps what was typed', async () => {
+    mockFetch(signedOut).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    renderApp('/login');
+
+    await fillAndSubmit('test@test.com', 'Test123@');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/cannot reach the server/i);
+    expect(screen.getByLabelText('Email')).toHaveValue('test@test.com');
+    expect(screen.getByRole('button', { name: 'Log in' })).toBeEnabled();
+  });
+
   // REQ-3.1.9
   it('explains a locked account', async () => {
     mockFetch(signedOut, {
