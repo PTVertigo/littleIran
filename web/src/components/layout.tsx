@@ -56,9 +56,14 @@ export function Layout() {
                 </>
               )}
               {state.status === 'signedOut' && (
-                <li>
-                  <NavLink to="/login">Log in</NavLink>
-                </li>
+                <>
+                  <li>
+                    <NavLink to="/login">Log in</NavLink>
+                  </li>
+                  <li>
+                    <NavLink to="/register">Sign up</NavLink>
+                  </li>
+                </>
               )}
             </ul>
           </nav>

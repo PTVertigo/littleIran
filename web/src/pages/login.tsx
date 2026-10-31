@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 
 import { ErrorBanner } from '../components/error-banner';
 import { AFTER_LOGIN_PATH } from '../components/route-guards';
@@ -62,6 +62,10 @@ export function LoginPage() {
           {loading ? 'Logging in…' : 'Log in'}
         </button>
       </form>
+
+      <p className="form-footer">
+        New to LittleIran? <Link to="/register">Create an account</Link>
+      </p>
     </section>
   );
 }
