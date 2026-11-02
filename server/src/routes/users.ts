@@ -4,7 +4,7 @@ import { pool } from '../db';
 import { requireAuth } from '../middleware/auth';
 import { countSubmissions } from '../submissions';
 import { BCRYPT_ROUNDS, PUBLIC_USER_COLUMNS } from '../users';
-import { isStrongPassword, isValidEmail, PASSWORD_RULES_MESSAGE, validateNames } from '../validation';
+import { isRecordId, isStrongPassword, isValidEmail, PASSWORD_RULES_MESSAGE, validateNames } from '../validation';
 
 const UNIQUE_VIOLATION = '23505';
 
@@ -20,7 +20,7 @@ usersRouter.get('/me', requireAuth, (req, res) => {
 // query, since a value that is not a number would otherwise be a database error.
 usersRouter.get('/:id', requireAuth, async (req, res) => {
   const id = String(req.params.id);
-  const { rows } = /^[1-9]\d{0,17}$/.test(id)
+  const { rows } = isRecordId(id)
     ? await pool.query(
         `SELECT id, first_name AS "firstName", last_name AS "lastName"
          FROM users WHERE id = $1 AND status = 'active'`,

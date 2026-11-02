@@ -56,6 +56,14 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     expectNoViolations();
   });
 
+  it('business detail page has no violations', () => {
+    cy.request('/api/businesses').its('body.businesses.0.id').then((id) => {
+      cy.visit(`/businesses/${id}`);
+      cy.contains('h2', 'Contact');
+      expectNoViolations();
+    });
+  });
+
   it('profile page has no violations', () => {
     logIn();
     cy.visit('/profile');

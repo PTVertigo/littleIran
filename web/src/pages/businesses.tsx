@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 
 import { ErrorBanner } from '../components/error-banner';
 import { Spinner } from '../components/spinner';
@@ -32,7 +33,10 @@ export function BusinessesPage() {
             {businesses.map((business) => (
               <li key={business.id}>
                 <article className="card">
-                  <h2>{business.name}</h2>
+                  <h2>
+                    {/* REQ-3.3.2 */}
+                    <Link to={`/businesses/${business.id}`}>{business.name}</Link>
+                  </h2>
                   <p className="card__meta">
                     {business.category} · {business.city}
                   </p>

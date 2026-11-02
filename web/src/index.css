@@ -256,6 +256,22 @@ main:focus {
   margin-bottom: 0;
 }
 
+/* Opening hours: a day on the left, its hours on the right */
+.hours {
+  border-collapse: collapse;
+  margin: var(--space-2) 0 var(--space-4);
+}
+
+.hours th,
+.hours td {
+  padding: var(--space-1) var(--space-4) var(--space-1) 0;
+  text-align: left;
+}
+
+.hours td {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Label and value pairs, such as the profile */
 .details {
   display: grid;

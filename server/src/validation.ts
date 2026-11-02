@@ -4,6 +4,12 @@ export function isValidEmail(email: string): boolean {
   return email.length <= 254 && EMAIL_PATTERN.test(email);
 }
 
+// A record id taken from an address. Anything that is not a plain positive number is a record that
+// does not exist, and must never reach the database, where it would be a type error.
+export function isRecordId(id: string): boolean {
+  return /^[1-9]\d{0,17}$/.test(id);
+}
+
 export const NAME_MAX_LENGTH = 50;
 
 // REQ-3.1.1 and REQ-3.2.2 both names are required. Expects them already trimmed.

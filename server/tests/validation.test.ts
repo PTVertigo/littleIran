@@ -1,4 +1,17 @@
-import { isStrongPassword, isValidEmail, validateNames } from '../src/validation';
+import { isRecordId, isStrongPassword, isValidEmail, validateNames } from '../src/validation';
+
+describe('isRecordId', () => {
+  it.each(['1', '42', '9223372036854775'])('accepts %p', (id) => {
+    expect(isRecordId(id)).toBe(true);
+  });
+
+  it.each(['', '0', '01', '-1', '1.5', 'abc', '1 OR 1=1', "1'; DROP TABLE users;--", '1e3', ' 1', '9'.repeat(19)])(
+    'rejects %p',
+    (id) => {
+      expect(isRecordId(id)).toBe(false);
+    },
+  );
+});
 
 // REQ-3.1.1 and REQ-3.2.2
 describe('validateNames', () => {

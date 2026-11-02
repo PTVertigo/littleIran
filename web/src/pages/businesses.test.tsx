@@ -33,6 +33,9 @@ describe('Business directory page', () => {
     const cards = await screen.findAllByRole('article');
     expect(cards).toHaveLength(2);
     expect(within(cards[0]).getByRole('heading', { level: 2, name: 'Norouz Restaurant' })).toBeInTheDocument();
+    // REQ-3.3.2 the name opens the business
+    expect(within(cards[0]).getByRole('link', { name: 'Norouz Restaurant' })).toHaveAttribute('href', '/businesses/1');
+    expect(within(cards[1]).getByRole('link', { name: 'Pars Rug Gallery' })).toHaveAttribute('href', '/businesses/2');
     expect(cards[0]).toHaveTextContent('Restaurant · Hamilton');
     expect(cards[0]).toHaveTextContent('Kebabs and stews.');
     expect(within(cards[1]).getByRole('heading', { level: 2, name: 'Pars Rug Gallery' })).toBeInTheDocument();
