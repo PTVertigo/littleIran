@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "migrate": "tsx scripts/migrate.ts",
     "seed": "tsx scripts/seed.ts",
+    "seed:listings": "tsx scripts/seed-listings.ts",
     "pretest": "DATABASE_URL=postgres://littleiran:littleiran@localhost:5432/littleiran_test tsx scripts/migrate.ts",
     "test": "jest"
   },
