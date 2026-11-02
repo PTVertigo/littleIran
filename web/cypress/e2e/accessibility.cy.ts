@@ -62,6 +62,15 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     expectNoViolations();
   });
 
+  it('public profile page has no violations', () => {
+    logIn();
+    cy.request('/api/users/me').its('body.user.id').then((id) => {
+      cy.visit(`/users/${id}`);
+      cy.contains('dt', 'Submissions');
+      expectNoViolations();
+    });
+  });
+
   it('edit profile page has no violations', () => {
     logIn();
     cy.visit('/profile/edit');

@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import { Router } from 'express';
 import { pool } from '../db';
 import { requireAuth } from '../middleware/auth';
+import { countSubmissions } from '../submissions';
 import { BCRYPT_ROUNDS, PUBLIC_USER_COLUMNS } from '../users';
 import { isStrongPassword, isValidEmail, PASSWORD_RULES_MESSAGE, validateNames } from '../validation';
 
@@ -12,6 +13,25 @@ export const usersRouter = Router();
 // REQ-3.2.1 view own profile: email, first and last name, registration date, role
 usersRouter.get('/me', requireAuth, (req, res) => {
   res.json({ user: req.auth!.user });
+});
+
+// REQ-3.2.3 public profile: what another member may see. Never the email, role, status or dates.
+// Defined after /me so that address is not read as an id. Ids are checked before they reach the
+// query, since a value that is not a number would otherwise be a database error.
+usersRouter.get('/:id', requireAuth, async (req, res) => {
+  const id = String(req.params.id);
+  const { rows } = /^[1-9]\d{0,17}$/.test(id)
+    ? await pool.query(
+        `SELECT id, first_name AS "firstName", last_name AS "lastName"
+         FROM users WHERE id = $1 AND status = 'active'`,
+        [id],
+      )
+    : { rows: [] };
+  if (!rows[0]) {
+    res.status(404).json({ error: 'User not found.' });
+    return;
+  }
+  res.json({ user: { ...rows[0], submissionCount: await countSubmissions(id) } });
 });
 
 // REQ-3.2.2 update own profile. Only the two names can change, whatever else the body carries.

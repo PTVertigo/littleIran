@@ -47,11 +47,14 @@ export function ProfilePage() {
             <dt>Account status</dt>
             <dd>{STATUS_LABELS[user.status]}</dd>
           </dl>
-          {/* REQ-3.2.2 */}
+          {/* REQ-3.2.2 and REQ-3.2.3 */}
           <p>
             <Link to="/profile/edit" className="button">
               Edit profile
             </Link>
+          </p>
+          <p>
+            <Link to={`/users/${user.id}`}>See how other members see your profile</Link>
           </p>
         </>
       )}

@@ -10,6 +10,7 @@ import { ForgotPasswordPage } from './pages/forgot-password';
 import { HomePage } from './pages/home';
 import { LoginPage } from './pages/login';
 import { ProfilePage } from './pages/profile';
+import { PublicProfilePage } from './pages/public-profile';
 import { RegisterPage } from './pages/register';
 import { ResetPasswordPage } from './pages/reset-password';
 
@@ -38,6 +39,7 @@ export const routes: RouteObject[] = [
               { path: 'dashboard', element: <DashboardPage /> },
               { path: 'profile', element: <ProfilePage /> },
               { path: 'profile/edit', element: <EditProfilePage /> },
+              { path: 'users/:id', element: <PublicProfilePage /> },
               { path: 'change-password', element: <ChangePasswordPage /> },
             ],
           },
