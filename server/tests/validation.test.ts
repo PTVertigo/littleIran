@@ -1,4 +1,21 @@
-import { isStrongPassword, isValidEmail } from '../src/validation';
+import { isStrongPassword, isValidEmail, validateNames } from '../src/validation';
+
+// REQ-3.1.1 and REQ-3.2.2
+describe('validateNames', () => {
+  it('accepts two ordinary names', () => {
+    expect(validateNames('Sara', 'Ahmadi')).toEqual({});
+  });
+
+  it('accepts names at the 50 character limit', () => {
+    expect(validateNames('a'.repeat(50), 'b'.repeat(50))).toEqual({});
+  });
+
+  it('names each missing or too long field', () => {
+    expect(validateNames('', 'Ahmadi')).toEqual({ firstName: 'Enter your first name.' });
+    expect(validateNames('Sara', 'b'.repeat(51))).toEqual({ lastName: 'Enter your last name.' });
+    expect(Object.keys(validateNames('', ''))).toEqual(['firstName', 'lastName']);
+  });
+});
 
 // UT-002 (REQ-3.1.2)
 describe('isValidEmail', () => {

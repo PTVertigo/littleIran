@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 
 import { ErrorBanner } from '../components/error-banner';
 import { Spinner } from '../components/spinner';
@@ -24,22 +25,30 @@ export function ProfilePage() {
       {error && <ErrorBanner message={error} />}
       {!error && !user && <Spinner label="Loading your profile" />}
       {user && (
-        <dl className="details">
-          <dt>Email</dt>
-          <dd>{user.email}</dd>
-          <dt>First name</dt>
-          <dd>{user.firstName}</dd>
-          <dt>Last name</dt>
-          <dd>{user.lastName}</dd>
-          <dt>Member since</dt>
-          <dd>
-            <time dateTime={user.createdAt}>
-              {new Date(user.createdAt).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })}
-            </time>
-          </dd>
-          <dt>Role</dt>
-          <dd>{ROLE_LABELS[user.role]}</dd>
-        </dl>
+        <>
+          <dl className="details">
+            <dt>Email</dt>
+            <dd>{user.email}</dd>
+            <dt>First name</dt>
+            <dd>{user.firstName}</dd>
+            <dt>Last name</dt>
+            <dd>{user.lastName}</dd>
+            <dt>Member since</dt>
+            <dd>
+              <time dateTime={user.createdAt}>
+                {new Date(user.createdAt).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })}
+              </time>
+            </dd>
+            <dt>Role</dt>
+            <dd>{ROLE_LABELS[user.role]}</dd>
+          </dl>
+          {/* REQ-3.2.2 */}
+          <p>
+            <Link to="/profile/edit" className="button">
+              Edit profile
+            </Link>
+          </p>
+        </>
       )}
     </section>
   );

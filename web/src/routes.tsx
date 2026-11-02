@@ -4,6 +4,7 @@ import { Layout } from './components/layout';
 import { GuestOnly, RequireAuth } from './components/route-guards';
 import { ChangePasswordPage } from './pages/change-password';
 import { DashboardPage } from './pages/dashboard';
+import { EditProfilePage } from './pages/edit-profile';
 import { ErrorPage } from './pages/error';
 import { ForgotPasswordPage } from './pages/forgot-password';
 import { HomePage } from './pages/home';
@@ -36,6 +37,7 @@ export const routes: RouteObject[] = [
             children: [
               { path: 'dashboard', element: <DashboardPage /> },
               { path: 'profile', element: <ProfilePage /> },
+              { path: 'profile/edit', element: <EditProfilePage /> },
               { path: 'change-password', element: <ChangePasswordPage /> },
             ],
           },

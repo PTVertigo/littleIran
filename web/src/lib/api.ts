@@ -19,7 +19,7 @@ export class ApiError extends Error {
 }
 
 type RequestOptions = {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PUT';
   body?: object;
 };
 
