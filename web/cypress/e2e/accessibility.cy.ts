@@ -56,6 +56,18 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     expectNoViolations();
   });
 
+  it('business search results have no violations', () => {
+    cy.visit('/businesses?search=restaurant');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
+  it('business search with no results has no violations', () => {
+    cy.visit('/businesses?search=zzzzzz');
+    cy.contains('No businesses match');
+    expectNoViolations();
+  });
+
   it('add a business page has no violations', () => {
     logIn();
     cy.visit('/businesses/new');

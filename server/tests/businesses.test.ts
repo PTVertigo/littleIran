@@ -132,6 +132,164 @@ describe('GET /api/businesses', () => {
   });
 });
 
+// REQ-3.7.1
+describe('GET /api/businesses?search=', () => {
+  const search = (text: string) => request(app).get('/api/businesses').query({ search: text });
+  const names = (res: request.Response) => res.body.businesses.map((b: { name: string }) => b.name);
+
+  beforeEach(async () => {
+    await addBusiness({ name: 'Norouz Restaurant' }, 'Restaurant');
+    await addBusiness({ name: 'Persian Cafe' }, 'Restaurant');
+    await addBusiness({ name: 'Persian Rug Gallery' }, 'Retail');
+    await addBusiness({ name: 'Hafez Clinic', description: 'Restaurant-quality nutrition advice.' }, 'Health & Wellness');
+  });
+
+  it('finds businesses whose name contains the word, ignoring case', async () => {
+    expect(names(await search('persian'))).toEqual(['Persian Cafe', 'Persian Rug Gallery']);
+    expect(names(await search('PERSIAN'))).toEqual(['Persian Cafe', 'Persian Rug Gallery']);
+    expect(names(await search('ouz'))).toEqual(['Norouz Restaurant']);
+  });
+
+  it('finds businesses whose category contains the word', async () => {
+    expect(names(await search('retail'))).toEqual(['Persian Rug Gallery']);
+    expect(names(await search('health'))).toEqual(['Hafez Clinic']);
+    expect(names(await search('wellness'))).toEqual(['Hafez Clinic']);
+  });
+
+  // FE-003: "Restaurant" shows the businesses with Restaurant in the name, and the Restaurant category
+  it('finds a word in either the name or the category', async () => {
+    expect(names(await search('Restaurant'))).toEqual(['Norouz Restaurant', 'Persian Cafe']);
+  });
+
+  it('needs every word to match, each in the name or the category', async () => {
+    expect(names(await search('persian restaurant'))).toEqual(['Persian Cafe']);
+    expect(names(await search('restaurant persian'))).toEqual(['Persian Cafe']);
+    expect(names(await search('persian retail'))).toEqual(['Persian Rug Gallery']);
+    expect(names(await search('persian clinic'))).toEqual([]);
+  });
+
+  it('does not look in the description', async () => {
+    expect(names(await search('nutrition'))).toEqual([]);
+  });
+
+  it('answers with an empty list, not an error, when nothing matches', async () => {
+    const res = await search('zzzzzz');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ businesses: [] });
+  });
+
+  it('lists everything for an empty or blank search', async () => {
+    expect(await search('')).toMatchObject({ status: 200 });
+    expect(names(await search(''))).toHaveLength(4);
+    expect(names(await search('   '))).toHaveLength(4);
+    expect(names(await request(app).get('/api/businesses'))).toHaveLength(4);
+  });
+
+  it('ignores extra spaces around and between words', async () => {
+    expect(names(await search('   persian    restaurant  '))).toEqual(['Persian Cafe']);
+  });
+
+  it('never returns a pending or rejected listing, even when it matches', async () => {
+    await addBusiness({ name: 'Persian Waiting Room', status: 'pending' }, 'Restaurant');
+    await addBusiness({ name: 'Persian Refused', status: 'rejected', rejection_reason: 'No address.' }, 'Restaurant');
+
+    expect(names(await search('persian'))).toEqual(['Persian Cafe', 'Persian Rug Gallery']);
+  });
+
+  it('keeps the results in name order', async () => {
+    expect(names(await search('e'))).toEqual(['Hafez Clinic', 'Norouz Restaurant', 'Persian Cafe', 'Persian Rug Gallery']);
+  });
+
+  it('returns the same basic information as the directory', async () => {
+    const [business] = (await search('norouz')).body.businesses;
+
+    expect(Object.keys(business).sort()).toEqual(['category', 'city', 'description', 'id', 'name']);
+  });
+
+  it('finds Persian-script names', async () => {
+    await addBusiness({ name: 'رستوران نوروز' }, 'Restaurant');
+
+    expect(names(await search('نوروز'))).toEqual(['رستوران نوروز']);
+  });
+
+  // REQ-4.1.1 the characters LIKE treats as wildcards mean themselves in a search
+  it('treats % and _ as ordinary characters', async () => {
+    await addBusiness({ name: '100% Persian Rugs' }, 'Retail');
+    await addBusiness({ name: 'Under_score Cafe' }, 'Restaurant');
+
+    expect(names(await search('%'))).toEqual(['100% Persian Rugs']);
+    expect(names(await search('_'))).toEqual(['Under_score Cafe']);
+    expect(names(await search('100%'))).toEqual(['100% Persian Rugs']);
+    expect(names(await search('P_rsian'))).toEqual([]);
+  });
+
+  it('treats a backslash as an ordinary character', async () => {
+    expect((await search('\\')).body.businesses).toEqual([]);
+    expect((await search('\\%')).status).toBe(200);
+  });
+
+  // API-004
+  it.each([
+    "'; DROP TABLE--",
+    "'; DROP TABLE businesses;--",
+    "' OR '1'='1",
+    "persian' OR 1=1 --",
+    '"; SELECT pg_sleep(5);--',
+    "' UNION SELECT id, email, password_hash, email, email FROM users--",
+    '$1',
+    '${7*7}',
+  ])('answers 200 and finds nothing for the injection attempt %p', async (attempt) => {
+    const started = Date.now();
+
+    const res = await search(attempt);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ businesses: [] });
+    expect(Date.now() - started).toBeLessThan(4000);
+    expect((await pool.query('SELECT count(*)::int AS n FROM businesses')).rows[0].n).toBe(4);
+  });
+
+  it('does not let an injection attempt match everything', async () => {
+    expect(names(await search("' OR '1'='1"))).toEqual([]);
+    expect(names(await search("persian' OR 1=1 --"))).toEqual([]);
+  });
+
+  it('uses only the first five words', async () => {
+    const res = await search('persian cafe x x x x x x x x');
+
+    expect(res.status).toBe(200);
+  });
+
+  it('refuses a search over 100 characters', async () => {
+    const res = await search('a'.repeat(101));
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Search for at most 100 characters.' });
+  });
+
+  it('refuses more than one search phrase', async () => {
+    const res = await request(app).get('/api/businesses?search=a&search=b');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Search for a single phrase.' });
+  });
+
+  it('refuses a null character without a server error', async () => {
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const res = await request(app).get('/api/businesses?search=pers%00ian');
+
+    expect(res.status).toBe(400);
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
+  it('is open to a visitor who is not logged in', async () => {
+    expect((await search('persian')).status).toBe(200);
+  });
+});
+
 // REQ-3.3.2
 describe('GET /api/businesses/:id', () => {
   it('returns the name, address, phone, email, website, hours, description and category', async () => {

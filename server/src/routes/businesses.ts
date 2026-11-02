@@ -2,18 +2,31 @@ import { Router } from 'express';
 import { validateBusiness } from '../business-validation';
 import { pool } from '../db';
 import { requireAuth } from '../middleware/auth';
+import { escapeLike, parseSearch } from '../search';
 import { isRecordId } from '../validation';
 
 export const businessesRouter = Router();
 
 // REQ-3.3.1 browse businesses: every approved listing, open to everyone because approval is what makes
 // a listing public. Only the basic information is listed; pending and rejected listings never appear.
-businessesRouter.get('/', async (_req, res) => {
+// REQ-3.7.1 ?search=... narrows it to businesses whose name or category contains every word typed.
+businessesRouter.get('/', async (req, res) => {
+  const search = parseSearch(req.query.search);
+  if ('error' in search) {
+    res.status(400).json({ error: search.error });
+    return;
+  }
+
+  // One condition per word, built only from parameter numbers. The words themselves are parameters.
+  const patterns = search.terms.map((term) => `%${escapeLike(term)}%`);
+  const conditions = patterns.map((_, i) => `AND (b.name ILIKE $${i + 1} OR c.name ILIKE $${i + 1})`).join(' ');
+
   const { rows } = await pool.query(
     `SELECT b.id, b.name, c.name AS category, b.city, b.description
      FROM businesses b JOIN categories c ON c.id = b.category_id
-     WHERE b.status = 'approved'
+     WHERE b.status = 'approved' ${conditions}
      ORDER BY lower(b.name), b.id`,
+    patterns,
   );
   res.json({ businesses: rows });
 });
