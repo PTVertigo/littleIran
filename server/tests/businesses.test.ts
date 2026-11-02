@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { browser, sessionToken } from './browser';
 import { createApp } from '../src/app';
 import { pool } from '../src/db';
 
@@ -245,5 +246,194 @@ describe('GET /api/businesses/:id', () => {
     const id = await addBusiness();
 
     expect((await detail(id)).headers['cache-control']).toBe('no-store');
+  });
+});
+
+// REQ-3.3 / API-003
+describe('POST /api/businesses', () => {
+  const listing = () => ({
+    name: 'Darband Restaurant',
+    categoryId: '',
+    description: 'Mountain-style Persian dining.',
+    street: '45 Example Road',
+    city: 'Mississauga',
+    postalCode: 'l5b 1b2',
+    phone: '(905) 555 0102',
+    email: 'Info@Darband.example.com',
+    website: 'https://example.com/darband',
+    hours: [
+      { day: 1, opens: '12:00', closes: '23:00' },
+      { day: 6, opens: '12:00', closes: '23:30' },
+    ],
+  });
+  let token: string;
+  let userId: string;
+  let restaurantId: string;
+
+  const categoryId = async (type: string, name: string) =>
+    (await pool.query('SELECT id FROM categories WHERE type = $1 AND name = $2', [type, name])).rows[0].id as string;
+  // Pass null to send the request with no session at all
+  const create = (body: object, session: string | null = token) => browser(app, session ?? undefined).post('/api/businesses').send(body);
+  const valid = () => ({ ...listing(), categoryId: restaurantId });
+
+  beforeEach(async () => {
+    const registered = await browser(app).post('/api/users')
+      .send({ email: 'owner@test.com', password: 'Test123@', firstName: 'Omid', lastName: 'Owner' });
+    userId = registered.body.id;
+    token = sessionToken(await browser(app).post('/api/auth/login').send({ email: 'owner@test.com', password: 'Test123@' }))!;
+    restaurantId = await categoryId('business', 'Restaurant');
+  });
+
+  // API-003
+  it('creates the listing as pending and answers 201', async () => {
+    const res = await create(valid());
+
+    expect(res.status).toBe(201);
+    expect(res.body.business).toEqual({ id: expect.any(String), name: 'Darband Restaurant', status: 'pending' });
+  });
+
+  it('stores the cleaned-up values, the owner, the category and the hours', async () => {
+    const id = (await create(valid())).body.business.id;
+
+    const { rows } = await pool.query('SELECT * FROM businesses WHERE id = $1', [id]);
+    expect(rows[0]).toMatchObject({
+      user_id: userId,
+      category_id: restaurantId,
+      name: 'Darband Restaurant',
+      street: '45 Example Road',
+      city: 'Mississauga',
+      postal_code: 'L5B 1B2',
+      phone: '905-555-0102',
+      email: 'info@darband.example.com',
+      website: 'https://example.com/darband',
+      status: 'pending',
+      rejection_reason: null,
+    });
+    const hours = await pool.query(
+      "SELECT day_of_week, to_char(opens_at, 'HH24:MI') AS opens, to_char(closes_at, 'HH24:MI') AS closes FROM business_hours WHERE business_id = $1 ORDER BY 1",
+      [id],
+    );
+    expect(hours.rows).toEqual([
+      { day_of_week: 1, opens: '12:00', closes: '23:00' },
+      { day_of_week: 6, opens: '12:00', closes: '23:30' },
+    ]);
+  });
+
+  it('does not show the listing in the directory or on its own page until it is approved', async () => {
+    const id = (await create(valid())).body.business.id;
+
+    expect((await list()).body.businesses).toEqual([]);
+    expect((await detail(id)).status).toBe(404);
+
+    await pool.query("UPDATE businesses SET status = 'approved' WHERE id = $1", [id]);
+    expect((await list()).body.businesses).toHaveLength(1);
+    expect((await detail(id)).body.business.hours).toHaveLength(2);
+  });
+
+  it('works without a website', async () => {
+    const res = await create({ ...valid(), website: '' });
+
+    expect(res.status).toBe(201);
+    expect((await pool.query('SELECT website FROM businesses')).rows[0].website).toBeNull();
+  });
+
+  it('ignores a status, owner or reason sent in the request', async () => {
+    const res = await create({ ...valid(), status: 'approved', user_id: '999', userId: '999', rejection_reason: 'x' });
+
+    const { rows } = await pool.query('SELECT user_id, status, rejection_reason FROM businesses WHERE id = $1', [res.body.business.id]);
+    expect(rows[0]).toEqual({ user_id: userId, status: 'pending', rejection_reason: null });
+  });
+
+  it('counts towards the member\'s submissions on their public profile', async () => {
+    await create(valid());
+    await create({ ...valid(), name: 'Second Restaurant' });
+
+    const { rows } = await pool.query('SELECT count(*)::int AS n FROM businesses WHERE user_id = $1', [userId]);
+    expect(rows[0].n).toBe(2);
+  });
+
+  it('stores markup and SQL in a name as plain text', async () => {
+    const name = "Bobby'); DROP TABLE businesses;--<script>alert(1)</script>";
+
+    const res = await create({ ...valid(), name });
+
+    expect(res.status).toBe(201);
+    expect((await pool.query('SELECT name FROM businesses')).rows[0].name).toBe(name);
+  });
+
+  // UT-005 at the API: bad input gets one message per field and nothing is saved
+  it('answers 400 with a message per field, and saves nothing, when fields are missing', async () => {
+    const res = await create({});
+
+    expect(res.status).toBe(400);
+    expect(Object.keys(res.body.errors).sort()).toEqual([
+      'categoryId', 'city', 'description', 'email', 'hours', 'name', 'phone', 'postalCode', 'street',
+    ]);
+    expect((await pool.query('SELECT count(*)::int AS n FROM businesses')).rows[0].n).toBe(0);
+  });
+
+  it.each([
+    ['a website that is not a web address', { website: 'javascript:alert(1)' }, 'website'],
+    ['a phone number that is too short', { phone: '555-0102' }, 'phone'],
+    ['a postal code that is not Canadian', { postalCode: '90210' }, 'postalCode'],
+    ['an invalid email address', { email: 'info@darband' }, 'email'],
+    ['a business that closes before it opens', { hours: [{ day: 1, opens: '20:00', closes: '08:00' }] }, 'hours'],
+    ['no opening hours', { hours: [] }, 'hours'],
+    ['a name over 100 characters', { name: 'a'.repeat(101) }, 'name'],
+  ])('refuses %s', async (_label, change, field) => {
+    const res = await create({ ...valid(), ...change });
+
+    expect(res.status).toBe(400);
+    expect(Object.keys(res.body.errors)).toEqual([field]);
+    expect((await pool.query('SELECT count(*)::int AS n FROM businesses')).rows[0].n).toBe(0);
+  });
+
+  it('refuses a category that does not exist, or that belongs to events', async () => {
+    for (const id of ['99999', await categoryId('event', 'Festival')]) {
+      const res = await create({ ...valid(), categoryId: id });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toEqual({ categoryId: 'Choose a category.' });
+    }
+    expect((await pool.query('SELECT count(*)::int AS n FROM businesses')).rows[0].n).toBe(0);
+  });
+
+  it('leaves no half-saved listing when saving the hours fails part way', async () => {
+    // The listing and its first day are written before Saturday is rejected, so this proves the whole save is undone
+    await pool.query(`
+      CREATE FUNCTION fail_saturday() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.day_of_week = 6 THEN RAISE EXCEPTION 'simulated failure'; END IF;
+        RETURN NEW;
+      END $$`);
+    await pool.query('CREATE TRIGGER fail_saturday BEFORE INSERT ON business_hours FOR EACH ROW EXECUTE FUNCTION fail_saturday()');
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const res = await create(valid());
+
+      expect(res.status).toBe(500);
+      expect(res.body).toEqual({ error: 'Something went wrong. Please try again.' });
+      expect((await pool.query('SELECT count(*)::int AS n FROM businesses')).rows[0].n).toBe(0);
+      expect((await pool.query('SELECT count(*)::int AS n FROM business_hours')).rows[0].n).toBe(0);
+    } finally {
+      error.mockRestore();
+      await pool.query('DROP TRIGGER fail_saturday ON business_hours');
+      await pool.query('DROP FUNCTION fail_saturday()');
+    }
+  });
+
+  it('asks a visitor with no session to log in, and saves nothing', async () => {
+    const res = await create(valid(), null);
+
+    expect(res.status).toBe(401);
+    expect((await pool.query('SELECT count(*)::int AS n FROM businesses')).rows[0].n).toBe(0);
+  });
+
+  // REQ-4.1.4 state-changing requests need the CSRF token
+  it('refuses a request without the CSRF token', async () => {
+    const res = await request(app).post('/api/businesses').set('Cookie', `sid=${token}`).send(valid());
+
+    expect(res.status).toBe(403);
+    expect((await pool.query('SELECT count(*)::int AS n FROM businesses')).rows[0].n).toBe(0);
   });
 });

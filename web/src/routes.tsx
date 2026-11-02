@@ -11,6 +11,7 @@ import { ErrorPage } from './pages/error';
 import { ForgotPasswordPage } from './pages/forgot-password';
 import { HomePage } from './pages/home';
 import { LoginPage } from './pages/login';
+import { NewBusinessPage } from './pages/new-business';
 import { ProfilePage } from './pages/profile';
 import { PublicProfilePage } from './pages/public-profile';
 import { RegisterPage } from './pages/register';
@@ -42,6 +43,8 @@ export const routes: RouteObject[] = [
             element: <RequireAuth />,
             children: [
               { path: 'dashboard', element: <DashboardPage /> },
+              // Static, so it wins over businesses/:id; only a logged-in member can submit a listing
+              { path: 'businesses/new', element: <NewBusinessPage /> },
               { path: 'profile', element: <ProfilePage /> },
               { path: 'profile/edit', element: <EditProfilePage /> },
               { path: 'users/:id', element: <PublicProfilePage /> },

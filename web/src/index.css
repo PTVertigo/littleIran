@@ -256,6 +256,57 @@ main:focus {
   margin-bottom: 0;
 }
 
+/* The hours section of the business form: one row per day */
+.hours-field {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.hours-field legend {
+  padding: 0 var(--space-2);
+  font-weight: 600;
+}
+
+.hours-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+
+.hours-row__day {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 9rem;
+}
+
+.hours-row input[type='checkbox'] {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.hours-row input[type='time'] {
+  min-height: 44px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.hours-row input[type='time']:disabled {
+  opacity: 0.55;
+}
+
+.page-actions {
+  margin: var(--space-3) 0;
+}
+
 /* Opening hours: a day on the left, its hours on the right */
 .hours {
   border-collapse: collapse;
@@ -334,7 +385,9 @@ main:focus {
   border-color: var(--error);
 }
 
-.field input {
+.field input,
+.field select,
+.field textarea {
   flex: 1;
   min-width: 0;
   min-height: 44px;
@@ -347,8 +400,15 @@ main:focus {
 }
 
 /* The wrapper draws the focus ring for the input and the toggle together */
-.field input:focus-visible {
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible {
   outline: none;
+}
+
+.field textarea {
+  min-height: 8rem;
+  resize: vertical;
 }
 
 .field__toggle {

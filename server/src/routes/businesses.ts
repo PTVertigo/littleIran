@@ -1,5 +1,7 @@
 import { Router } from 'express';
+import { validateBusiness } from '../business-validation';
 import { pool } from '../db';
+import { requireAuth } from '../middleware/auth';
 import { isRecordId } from '../validation';
 
 export const businessesRouter = Router();
@@ -14,6 +16,58 @@ businessesRouter.get('/', async (_req, res) => {
      ORDER BY lower(b.name), b.id`,
   );
   res.json({ businesses: rows });
+});
+
+// REQ-3.3 create a business listing. It starts as pending and belongs to the member who submitted it;
+// it only appears in the directory once an administrator approves it (REQ-3.8.2).
+businessesRouter.post('/', requireAuth, async (req, res) => {
+  const { errors, value } = validateBusiness(req.body);
+  if (!value) {
+    res.status(400).json({ errors });
+    return;
+  }
+
+  const category = await pool.query("SELECT 1 FROM categories WHERE id = $1 AND type = 'business'", [value.categoryId]);
+  if (!category.rowCount) {
+    res.status(400).json({ errors: { categoryId: 'Choose a category.' } });
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query<{ id: string }>(
+      `INSERT INTO businesses
+         (user_id, category_id, name, description, street, city, postal_code, phone, email, website)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id`,
+      [
+        req.auth!.user.id,
+        value.categoryId,
+        value.name,
+        value.description,
+        value.street,
+        value.city,
+        value.postalCode,
+        value.phone,
+        value.email,
+        value.website,
+      ],
+    );
+    for (const { day, opens, closes } of value.hours) {
+      await client.query(
+        'INSERT INTO business_hours (business_id, day_of_week, opens_at, closes_at) VALUES ($1, $2, $3, $4)',
+        [rows[0].id, day, opens, closes],
+      );
+    }
+    await client.query('COMMIT');
+    res.status(201).json({ business: { id: rows[0].id, name: value.name, status: 'pending' } });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 });
 
 // REQ-3.3.2 one business in full. A pending or rejected listing answers "not found", exactly like an

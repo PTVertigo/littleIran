@@ -22,6 +22,11 @@ export function BusinessesPage() {
     <section>
       <h1>Business directory</h1>
       <p className="muted">Iranian-owned businesses across Southern Ontario.</p>
+      <p className="page-actions">
+        <Link to="/businesses/new" className="button">
+          Add a business
+        </Link>
+      </p>
 
       {error && <ErrorBanner message={error} />}
       {!error && !businesses && <Spinner label="Loading businesses" />}

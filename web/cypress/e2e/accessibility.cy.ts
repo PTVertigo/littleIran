@@ -56,6 +56,23 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     expectNoViolations();
   });
 
+  it('add a business page has no violations', () => {
+    logIn();
+    cy.visit('/businesses/new');
+    cy.contains('h1', 'Add a business');
+    cy.get('select').should('be.visible');
+    expectNoViolations();
+  });
+
+  it('add a business page showing its errors has no violations', () => {
+    logIn();
+    cy.visit('/businesses/new');
+    cy.get('select').should('be.visible');
+    cy.contains('button', 'Submit for review').click();
+    cy.get('.field__error').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
   it('business detail page has no violations', () => {
     cy.request('/api/businesses').its('body.businesses.0.id').then((id) => {
       cy.visit(`/businesses/${id}`);

@@ -1,6 +1,12 @@
-// REQ-3.2.3 how many businesses and events a user has submitted, shown on their public profile.
-// Those tables arrive with the Week 5 and Week 6 features, so until then there is nothing to count.
-// When they exist, count both here and nothing else needs to change.
-export async function countSubmissions(_userId: string): Promise<number> {
-  return 0;
+import { pool } from './db';
+
+// REQ-3.2.3 how many businesses and events a user has submitted, whatever their review status,
+// shown on their public profile
+export async function countSubmissions(userId: string): Promise<number> {
+  const { rows } = await pool.query<{ count: number }>(
+    `SELECT (SELECT count(*) FROM businesses WHERE user_id = $1)::int
+          + (SELECT count(*) FROM events WHERE user_id = $1)::int AS count`,
+    [userId],
+  );
+  return rows[0].count;
 }
