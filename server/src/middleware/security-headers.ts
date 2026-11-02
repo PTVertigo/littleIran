@@ -23,6 +23,11 @@ export const securityHeaders: RequestHandler = (req, res, next) => {
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  // REQ-4.1.5 once a browser has seen the site over HTTPS it refuses plain http for a year.
+  // Development runs on plain http, so this is production only.
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000');
+  }
   // Account and session responses must not be kept by browsers or proxies
   if (req.path.startsWith('/api')) res.setHeader('Cache-Control', 'no-store');
   next();

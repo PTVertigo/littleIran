@@ -11,6 +11,15 @@ const RESET_TOKEN_MINUTES = 60;
 
 export const passwordResetRouter = Router();
 
+// A failed send must not change the answer, or the error would show the address is registered
+async function deliverResetEmail(email: string, link: string) {
+  try {
+    await sendPasswordResetEmail(email, link);
+  } catch (err) {
+    console.error('Password reset email failed:', err instanceof Error ? err.message : err);
+  }
+}
+
 // REQ-3.1.6 step 1: the answer is the same whether or not the email is registered
 passwordResetRouter.post('/forgot-password', async (req, res) => {
   const body = req.body ?? {};
@@ -28,7 +37,8 @@ passwordResetRouter.post('/forgot-password', async (req, res) => {
     [email, hashToken(token), RESET_TOKEN_MINUTES],
   );
   if (rowCount) {
-    await sendPasswordResetEmail(email, `${RESET_LINK_BASE}?token=${token}`);
+    // Not awaited: the wait would make a registered address answer slower than an unknown one
+    void deliverResetEmail(email, `${RESET_LINK_BASE}?token=${token}`);
   }
 
   res.status(202).json({ message: 'If that email is registered, a reset link is on its way.' });

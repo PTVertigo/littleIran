@@ -61,6 +61,20 @@ describe('POST /api/auth/forgot-password', () => {
     expect(mockedSend).not.toHaveBeenCalled();
   });
 
+  it('still answers the same when the email cannot be sent, so the address is not revealed', async () => {
+    const errorLog = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const unknown = await forgot('nobody@test.com');
+    mockedSend.mockRejectedValueOnce(new Error('provider down'));
+
+    const known = await forgot(credentials.email);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(known.status).toBe(unknown.status);
+    expect(known.body).toEqual(unknown.body);
+    expect(errorLog).toHaveBeenCalledWith('Password reset email failed:', 'provider down');
+    errorLog.mockRestore();
+  });
+
   it('rejects a malformed address', async () => {
     expect((await forgot('not-an-email')).status).toBe(400);
     expect(mockedSend).not.toHaveBeenCalled();
