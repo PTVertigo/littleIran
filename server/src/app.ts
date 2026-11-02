@@ -8,12 +8,27 @@ import { passwordResetRouter } from './routes/password-reset';
 import { usersRouter } from './routes/users';
 
 // REQ-4.2 never leak stack traces or database details to the client
-const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
   if (err.type === 'entity.parse.failed') {
     res.status(400).json({ error: 'Request body must be valid JSON.' });
     return;
   }
-  console.error(err);
+  if (err.type === 'entity.too.large') {
+    res.status(413).json({ error: 'That request is too large.' });
+    return;
+  }
+  // Other mistakes by the client, such as a malformed address, are not server failures
+  const status = err.status ?? err.statusCode;
+  if (status >= 400 && status < 500) {
+    res.status(status).json({ error: 'That request could not be understood.' });
+    return;
+  }
+  // The stack only: a database error object also carries the values of the failing query
+  console.error('Unhandled error:', err instanceof Error ? err.stack : String(err));
   res.status(500).json({ error: 'Something went wrong. Please try again.' });
 };
 
@@ -46,6 +61,11 @@ export function createApp({ webDist }: { webDist?: string } = {}) {
       res.sendFile(path.join(webDist, 'index.html'));
     });
   }
+
+  // An unknown API address gets JSON like every other API answer, not the framework's HTML page
+  app.use('/api', (_req, res) => {
+    res.status(404).json({ error: 'Not found.' });
+  });
 
   app.use(errorHandler);
   return app;

@@ -4,6 +4,7 @@ import { clearSessionCookie, setSessionCookie } from '../cookies';
 import { pool } from '../db';
 import { recordFailedLogin } from '../lockout';
 import { requireAuth } from '../middleware/auth';
+import { logSecurity } from '../security-log';
 import { createSession, deleteSession } from '../sessions';
 import { BCRYPT_ROUNDS, PUBLIC_USER_COLUMNS } from '../users';
 import { isStrongPassword, PASSWORD_RULES_MESSAGE } from '../validation';
@@ -28,13 +29,15 @@ authRouter.post('/login', async (req, res) => {
   const { password_hash: passwordHash, locked_until: lockedUntil, ...user } = rows[0] ?? {};
 
   if (lockedUntil && lockedUntil > new Date()) {
-    console.warn('security: login refused for locked account', { userId: user.id });
+    logSecurity('login refused for locked account', { userId: user.id });
     res.status(423).json({ error: LOCKED_MESSAGE });
     return;
   }
 
   const passwordMatches = await bcrypt.compare(password, passwordHash ?? DUMMY_HASH);
   if (!user.id || !passwordMatches) {
+    // The email is not logged, so an unknown account has no id to record
+    logSecurity(user.id ? 'login failed' : 'login failed for an unknown account', { userId: user.id });
     if (user.id && (await recordFailedLogin(user.id))) {
       res.status(423).json({ error: LOCKED_MESSAGE });
       return;
@@ -51,6 +54,7 @@ authRouter.post('/login', async (req, res) => {
     [user.id],
   );
   setSessionCookie(res, session.token, session.expiresAt);
+  logSecurity('login succeeded', { userId: user.id }, 'info');
   res.json({ expiresAt: session.expiresAt, user });
 });
 
@@ -62,6 +66,7 @@ authRouter.get('/me', requireAuth, (req, res) => {
 authRouter.post('/logout', requireAuth, async (req, res) => {
   await deleteSession(req.auth!.sessionId);
   clearSessionCookie(res);
+  logSecurity('logout', { userId: req.auth!.user.id }, 'info');
   res.status(204).end();
 });
 
@@ -80,6 +85,7 @@ authRouter.post('/change-password', requireAuth, async (req, res) => {
     req.auth!.user.id,
   ]);
   if (!(await bcrypt.compare(currentPassword, rows[0].password_hash))) {
+    logSecurity('password change refused for a wrong current password', { userId: req.auth!.user.id });
     res.status(400).json({ errors: { currentPassword: 'Your current password is incorrect.' } });
     return;
   }
@@ -97,5 +103,6 @@ authRouter.post('/change-password', requireAuth, async (req, res) => {
     req.auth!.user.id,
     req.auth!.sessionId,
   ]);
+  logSecurity('password changed', { userId: req.auth!.user.id }, 'info');
   res.json({ message: 'Password updated.' });
 });

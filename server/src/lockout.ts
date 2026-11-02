@@ -1,4 +1,5 @@
 import { pool } from './db';
+import { logSecurity } from './security-log';
 
 // REQ-3.1.9 / 4.1.6: 5 failed logins within 15 minutes lock the account for 30 minutes
 const MAX_FAILED_ATTEMPTS = 5;
@@ -29,6 +30,6 @@ export async function recordFailedLogin(userId: string): Promise<Date | null> {
   );
 
   if (!rows[0].lockedNow) return null;
-  console.warn('security: account locked after repeated failed logins', { userId });
+  logSecurity('account locked after repeated failed logins', { userId });
   return rows[0].lockedUntil;
 }
