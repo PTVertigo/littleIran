@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import { Router } from 'express';
 import { pool } from '../db';
 import { sendPasswordResetEmail } from '../email';
+import { logSecurity } from '../security-log';
 import { generateToken, hashToken } from '../tokens';
 import { BCRYPT_ROUNDS } from '../users';
 import { isStrongPassword, isValidEmail, PASSWORD_RULES_MESSAGE } from '../validation';
@@ -30,15 +31,19 @@ passwordResetRouter.post('/forgot-password', async (req, res) => {
   }
 
   const token = generateToken();
-  const { rowCount } = await pool.query(
+  const { rows } = await pool.query<{ id: string }>(
     `UPDATE users
      SET reset_token_hash = $2, reset_token_expires_at = now() + make_interval(mins => $3)
-     WHERE lower(email) = $1`,
+     WHERE lower(email) = $1
+     RETURNING id`,
     [email, hashToken(token), RESET_TOKEN_MINUTES],
   );
-  if (rowCount) {
+  if (rows[0]) {
+    logSecurity('password reset requested', { userId: rows[0].id }, 'info');
     // Not awaited: the wait would make a registered address answer slower than an unknown one
     void deliverResetEmail(email, `${RESET_LINK_BASE}?token=${token}`);
+  } else {
+    logSecurity('password reset requested for an unknown account', {}, 'info');
   }
 
   res.status(202).json({ message: 'If that email is registered, a reset link is on its way.' });
@@ -66,11 +71,13 @@ passwordResetRouter.post('/reset-password', async (req, res) => {
     [hashToken(token), passwordHash],
   );
   if (!rows[0]) {
+    logSecurity('password reset refused for an invalid or expired link');
     res.status(400).json({ error: 'This reset link is invalid or has expired.' });
     return;
   }
 
   // Whoever knew the old password must not stay logged in
   await pool.query('DELETE FROM sessions WHERE user_id = $1', [rows[0].id]);
+  logSecurity('password reset completed', { userId: rows[0].id }, 'info');
   res.json({ message: 'Password updated. You can now log in.' });
 });

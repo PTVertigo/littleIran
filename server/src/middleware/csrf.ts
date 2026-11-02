@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { RequestHandler } from 'express';
 import { CSRF_COOKIE, CSRF_HEADER, setCsrfCookie } from '../cookies';
+import { logSecurity } from '../security-log';
 import { generateToken } from '../tokens';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
@@ -18,7 +19,7 @@ export const csrfProtection: RequestHandler = (req, res, next) => {
 
   const headerToken = req.get(CSRF_HEADER);
   if (typeof cookieToken !== 'string' || !headerToken || !sameToken(cookieToken, headerToken)) {
-    console.warn('security: request refused for a missing or wrong CSRF token', { path: req.path });
+    logSecurity('request refused for a missing or wrong CSRF token', { method: req.method, path: req.path });
     res.status(403).json({ error: 'This page is out of date. Refresh it and try again.' });
     return;
   }
