@@ -21,6 +21,8 @@ describe('Profile', () => {
     cy.contains('dt', 'Last name').next('dd').should('have.text', 'Tester');
     cy.contains('dt', 'Member since').next('dd').should('contain', new Date().getFullYear());
     cy.contains('dt', 'Role').next('dd').should('have.text', 'Regular user');
+    // REQ-3.2.5
+    cy.contains('dt', 'Account status').next('dd').should('have.text', 'Active');
   });
 
   // REQ-3.2.2

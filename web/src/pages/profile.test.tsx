@@ -9,6 +9,7 @@ const user = {
   firstName: 'Sara',
   lastName: 'Ahmadi',
   role: 'user',
+  status: 'active',
   createdAt: '2026-10-01T12:00:00.000Z',
 };
 const session = { status: 200, body: { user } };
@@ -32,6 +33,24 @@ describe('Profile page', () => {
     expect(valueOf('Last name')).toHaveTextContent('Ahmadi');
     expect(valueOf('Member since')).toHaveTextContent('October 1, 2026');
     expect(valueOf('Role')).toHaveTextContent('Regular user');
+  });
+
+  // REQ-3.2.5
+  it('says in words that the account is active', async () => {
+    mockFetch(session, { status: 200, body: { user } });
+    renderApp('/profile');
+
+    await screen.findByText('sara@example.com');
+    expect(valueOf('Account status')).toHaveTextContent('Active');
+  });
+
+  it('says in words that the account is inactive', async () => {
+    const inactive = { ...user, status: 'inactive' };
+    mockFetch({ status: 200, body: { user: inactive } }, { status: 200, body: { user: inactive } });
+    renderApp('/profile');
+
+    await screen.findByText('sara@example.com');
+    expect(valueOf('Account status')).toHaveTextContent('Inactive');
   });
 
   it('marks the registration date for machines as well', async () => {

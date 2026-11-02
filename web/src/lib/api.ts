@@ -4,6 +4,7 @@ export type User = {
   firstName: string;
   lastName: string;
   role: 'user' | 'admin';
+  status: 'active' | 'inactive';
   createdAt: string;
 };
 

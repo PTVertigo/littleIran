@@ -128,8 +128,34 @@ describe('GET /api/users/me', () => {
       firstName: 'Sara',
       lastName: 'Ahmadi',
       role: 'user',
+      status: 'active',
       createdAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
     });
+  });
+
+  // REQ-3.2.5
+  it('says an account is active when it is', async () => {
+    const res = await profile(await loginAs());
+
+    expect(res.body.user.status).toBe('active');
+  });
+
+  it('says an account is inactive once it has been deactivated', async () => {
+    const token = await loginAs();
+    await pool.query("UPDATE users SET status = 'inactive'");
+
+    const res = await profile(token);
+
+    expect(res.body.user.status).toBe('inactive');
+  });
+
+  it('keeps the status when the names are updated, and does not let the request change it', async () => {
+    await pool.query("UPDATE users SET status = 'inactive'");
+    const token = await loginAs();
+
+    const res = await update({ firstName: 'Sarah', lastName: 'Rad', status: 'active' }, token);
+
+    expect(res.body.user.status).toBe('inactive');
   });
 
   it('shows the administrator role for an administrator', async () => {

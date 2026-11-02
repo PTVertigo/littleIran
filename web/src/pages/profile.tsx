@@ -8,6 +8,8 @@ import { ApiError, apiRequest, type User } from '../lib/api';
 // The role names the Milestone 4 document uses
 const ROLE_LABELS: Record<User['role'], string> = { user: 'Regular user', admin: 'Administrator' };
 
+const STATUS_LABELS: Record<User['status'], string> = { active: 'Active', inactive: 'Inactive' };
+
 // Screen 3 (user profile page). REQ-3.2.1 the logged-in user sees their own details
 export function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
@@ -41,6 +43,9 @@ export function ProfilePage() {
             </dd>
             <dt>Role</dt>
             <dd>{ROLE_LABELS[user.role]}</dd>
+            {/* REQ-3.2.5 spelled out in words, never by colour alone */}
+            <dt>Account status</dt>
+            <dd>{STATUS_LABELS[user.status]}</dd>
           </dl>
           {/* REQ-3.2.2 */}
           <p>
