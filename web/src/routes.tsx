@@ -8,6 +8,7 @@ import { ErrorPage } from './pages/error';
 import { ForgotPasswordPage } from './pages/forgot-password';
 import { HomePage } from './pages/home';
 import { LoginPage } from './pages/login';
+import { ProfilePage } from './pages/profile';
 import { RegisterPage } from './pages/register';
 import { ResetPasswordPage } from './pages/reset-password';
 
@@ -34,6 +35,7 @@ export const routes: RouteObject[] = [
             element: <RequireAuth />,
             children: [
               { path: 'dashboard', element: <DashboardPage /> },
+              { path: 'profile', element: <ProfilePage /> },
               { path: 'change-password', element: <ChangePasswordPage /> },
             ],
           },

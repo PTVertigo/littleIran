@@ -55,6 +55,13 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     expectNoViolations();
   });
 
+  it('profile page has no violations', () => {
+    logIn();
+    cy.visit('/profile');
+    cy.contains('dt', 'Email');
+    expectNoViolations();
+  });
+
   it('change password page has no violations', () => {
     logIn();
     cy.visit('/change-password');

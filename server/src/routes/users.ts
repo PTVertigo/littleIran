@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import { Router } from 'express';
 import { pool } from '../db';
+import { requireAuth } from '../middleware/auth';
 import { BCRYPT_ROUNDS, PUBLIC_USER_COLUMNS } from '../users';
 import { isStrongPassword, isValidEmail, PASSWORD_RULES_MESSAGE } from '../validation';
 
@@ -8,6 +9,11 @@ const NAME_MAX_LENGTH = 50;
 const UNIQUE_VIOLATION = '23505';
 
 export const usersRouter = Router();
+
+// REQ-3.2.1 view own profile: email, first and last name, registration date, role
+usersRouter.get('/me', requireAuth, (req, res) => {
+  res.json({ user: req.auth!.user });
+});
 
 // REQ-3.1.1 registration
 usersRouter.post('/', async (req, res) => {

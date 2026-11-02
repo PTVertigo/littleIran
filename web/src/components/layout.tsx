@@ -49,6 +49,9 @@ export function Layout() {
                     <NavLink to="/dashboard">Dashboard</NavLink>
                   </li>
                   <li>
+                    <NavLink to="/profile">Profile</NavLink>
+                  </li>
+                  <li>
                     <button type="button" className="link-button" onClick={logOut}>
                       Log out
                     </button>
