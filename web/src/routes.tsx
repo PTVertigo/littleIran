@@ -2,6 +2,7 @@ import type { RouteObject } from 'react-router';
 
 import { Layout } from './components/layout';
 import { GuestOnly, RequireAuth } from './components/route-guards';
+import { BusinessesPage } from './pages/businesses';
 import { ChangePasswordPage } from './pages/change-password';
 import { DashboardPage } from './pages/dashboard';
 import { EditProfilePage } from './pages/edit-profile';
@@ -23,6 +24,8 @@ export const routes: RouteObject[] = [
         errorElement: <ErrorPage />,
         children: [
           { index: true, element: <HomePage /> },
+          // Approved listings are public, so no login is needed to browse them
+          { path: 'businesses', element: <BusinessesPage /> },
           {
             element: <GuestOnly />,
             children: [

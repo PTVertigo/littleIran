@@ -43,6 +43,9 @@ export function Layout() {
                   Home
                 </NavLink>
               </li>
+              <li>
+                <NavLink to="/businesses">Businesses</NavLink>
+              </li>
               {state.status === 'signedIn' && (
                 <>
                   <li>

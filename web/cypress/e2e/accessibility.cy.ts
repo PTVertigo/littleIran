@@ -32,6 +32,7 @@ function logIn() {
 
 const publicPages = [
   ['home', '/'],
+  ['business directory', '/businesses'],
   ['login', '/login'],
   ['register', '/register'],
   ['forgot password', '/forgot-password'],

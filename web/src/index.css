@@ -224,6 +224,38 @@ main:focus {
   color: var(--text-secondary);
 }
 
+/* Cards in a responsive grid, such as the business directory */
+.card-grid {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0 var(--space-4);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-3);
+}
+
+.card {
+  height: 100%;
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.card h2 {
+  margin: 0 0 var(--space-1);
+  font-size: 1.125rem;
+}
+
+.card__meta {
+  margin: 0 0 var(--space-2);
+  color: var(--text-secondary);
+}
+
+.card p:last-child {
+  margin-bottom: 0;
+}
+
 /* Label and value pairs, such as the profile */
 .details {
   display: grid;
