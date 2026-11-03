@@ -229,6 +229,162 @@ describe('GET /api/events/:id', () => {
   });
 });
 
+// REQ-3.7.2 / FE-004's search half
+describe('GET /api/events?search=', () => {
+  const search = (text: string) => request(app).get('/api/events').query({ search: text });
+
+  beforeEach(async () => {
+    await addEvent({ title: 'Norouz Festival', starts_at: inDays(5) }, 'Festival');
+    await addEvent({ title: 'Persian Calligraphy Workshop', starts_at: inDays(6) }, 'Workshop');
+    await addEvent({ title: 'Persian Film Night', starts_at: inDays(7), description: 'A workshop on film.' }, 'Cultural Events');
+    await addEvent({ title: 'Yalda Night', starts_at: inDays(8) }, 'Celebration');
+  });
+
+  it('finds events whose name contains the word, ignoring case', async () => {
+    expect(titles(await search('persian'))).toEqual(['Persian Calligraphy Workshop', 'Persian Film Night']);
+    expect(titles(await search('PERSIAN'))).toEqual(['Persian Calligraphy Workshop', 'Persian Film Night']);
+    expect(titles(await search('ouz'))).toEqual(['Norouz Festival']);
+  });
+
+  it('finds events whose category contains the word', async () => {
+    expect(titles(await search('workshop'))).toEqual(['Persian Calligraphy Workshop']);
+    expect(titles(await search('celebration'))).toEqual(['Yalda Night']);
+    expect(titles(await search('cultural'))).toEqual(['Persian Film Night']);
+  });
+
+  it('finds a word in either the name or the category', async () => {
+    await addEvent({ title: 'Festival of Lights', starts_at: inDays(9) }, 'Celebration');
+
+    expect(titles(await search('festival'))).toEqual(['Norouz Festival', 'Festival of Lights']);
+  });
+
+  it('needs every word to match, each in the name or the category', async () => {
+    expect(titles(await search('persian workshop'))).toEqual(['Persian Calligraphy Workshop']);
+    expect(titles(await search('workshop persian'))).toEqual(['Persian Calligraphy Workshop']);
+    expect(titles(await search('night cultural'))).toEqual(['Persian Film Night']);
+    expect(titles(await search('persian yalda'))).toEqual([]);
+  });
+
+  it('does not look in the description', async () => {
+    // "A workshop on film." is the description of Persian Film Night, whose name and category do not say so
+    expect(titles(await search('film.'))).toEqual([]);
+    expect(titles(await search('on film'))).toEqual([]);
+  });
+
+  it('answers with an empty list, not an error, when nothing matches', async () => {
+    const res = await search('zzzzzz');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ events: [] });
+  });
+
+  it('lists everything for an empty or blank search', async () => {
+    expect(titles(await search(''))).toHaveLength(4);
+    expect(titles(await search('   '))).toHaveLength(4);
+    expect(titles(await list())).toHaveLength(4);
+  });
+
+  it('ignores extra spaces around and between words', async () => {
+    expect(titles(await search('   persian    workshop  '))).toEqual(['Persian Calligraphy Workshop']);
+  });
+
+  it('never returns a pending or rejected event, even when it matches', async () => {
+    await addEvent({ title: 'Persian Waiting Room', status: 'pending' }, 'Workshop');
+    await addEvent({ title: 'Persian Refused', status: 'rejected', rejection_reason: 'No venue.' }, 'Workshop');
+
+    expect(titles(await search('persian'))).toEqual(['Persian Calligraphy Workshop', 'Persian Film Night']);
+  });
+
+  it('keeps the events that are still to come before the finished ones, whatever matched', async () => {
+    await addEvent({ title: 'Persian Old Night', starts_at: inDays(-10) }, 'Workshop');
+    await addEvent({ title: 'Persian Later', starts_at: inDays(40) }, 'Workshop');
+
+    expect(titles(await search('persian'))).toEqual([
+      'Persian Calligraphy Workshop', 'Persian Film Night', 'Persian Later', 'Persian Old Night',
+    ]);
+  });
+
+  it('returns the same basic information as the events page', async () => {
+    const [event] = (await search('norouz')).body.events;
+
+    expect(Object.keys(event).sort()).toEqual(['category', 'description', 'id', 'location', 'past', 'startsAt', 'title']);
+  });
+
+  it('finds Persian-script names', async () => {
+    await addEvent({ title: 'جشن نوروز' }, 'Festival');
+
+    expect(titles(await search('نوروز'))).toEqual(['جشن نوروز']);
+  });
+
+  // REQ-4.1.1 the characters LIKE treats as wildcards mean themselves in a search
+  it('treats % and _ as ordinary characters', async () => {
+    await addEvent({ title: '50% Off Rug Sale' }, 'Workshop');
+    await addEvent({ title: 'Under_score Night' }, 'Workshop');
+
+    expect(titles(await search('%'))).toEqual(['50% Off Rug Sale']);
+    expect(titles(await search('_'))).toEqual(['Under_score Night']);
+    expect(titles(await search('U_der'))).toEqual([]);
+  });
+
+  it('treats a backslash as an ordinary character', async () => {
+    expect((await search('\\')).body.events).toEqual([]);
+    expect((await search('\\%')).status).toBe(200);
+  });
+
+  // API-004
+  it.each([
+    "'; DROP TABLE--",
+    "'; DROP TABLE events;--",
+    "' OR '1'='1",
+    "persian' OR 1=1 --",
+    '"; SELECT pg_sleep(5);--',
+    "' UNION SELECT id, email, password_hash, email, email, email, email FROM users--",
+    '$1',
+    '${7*7}',
+  ])('answers 200 and finds nothing for the injection attempt %p', async (attempt) => {
+    const started = Date.now();
+
+    const res = await search(attempt);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ events: [] });
+    expect(Date.now() - started).toBeLessThan(4000);
+    expect((await pool.query('SELECT count(*)::int AS n FROM events')).rows[0].n).toBe(4);
+  });
+
+  it('uses only the first five words', async () => {
+    expect((await search('persian film x x x x x x x x')).status).toBe(200);
+  });
+
+  it('refuses a search over 100 characters', async () => {
+    const res = await search('a'.repeat(101));
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Search for at most 100 characters.' });
+  });
+
+  it('refuses more than one search phrase', async () => {
+    const res = await request(app).get('/api/events?search=a&search=b');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Search for a single phrase.' });
+  });
+
+  it('refuses a null character without a server error', async () => {
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const res = await request(app).get('/api/events?search=pers%00ian');
+
+    expect(res.status).toBe(400);
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
+  it('is open to a visitor who is not logged in', async () => {
+    expect((await search('persian')).status).toBe(200);
+  });
+});
+
 // REQ-3.4 create an event
 describe('POST /api/events', () => {
   // A day about a month away, written as the organizer would pick it on a calendar

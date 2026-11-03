@@ -101,6 +101,18 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     expectNoViolations();
   });
 
+  it('event search results have no violations', () => {
+    cy.visit('/events?search=persian');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
+  it('event search with no results has no violations', () => {
+    cy.visit('/events?search=zzzzzz');
+    cy.contains('No events match');
+    expectNoViolations();
+  });
+
   it('add an event page has no violations', () => {
     logIn();
     cy.visit('/events/new');
