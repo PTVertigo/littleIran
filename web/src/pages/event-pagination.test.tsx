@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { eventPage, mockFetch, renderApp } from '../test/render';
@@ -79,7 +79,7 @@ describe('Events pagination', () => {
     await screen.findByText('Event 11');
     expect(router.state.location.search).toBe('?page=2');
 
-    await router.navigate(-1);
+    await act(() => router.navigate(-1));
     expect(await screen.findByText('Event 01')).toBeInTheDocument();
     expect(router.state.location.search).toBe('');
   });

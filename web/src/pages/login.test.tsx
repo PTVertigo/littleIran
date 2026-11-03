@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { mockFetch, renderApp } from '../test/render';
@@ -208,7 +208,7 @@ describe('Logging out', () => {
     await userEvent.click(await nav.findByRole('button', { name: 'Log out' }));
     await nav.findByRole('link', { name: 'Log in' });
 
-    await router.navigate('/dashboard');
+    await act(() => router.navigate('/dashboard'));
 
     expect(await screen.findByRole('heading', { name: 'Log in' })).toBeVisible();
     expect(router.state.location.pathname).toBe('/login');

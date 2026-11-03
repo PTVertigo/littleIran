@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { businessPage, mockFetch, renderApp } from '../test/render';
@@ -77,7 +77,7 @@ describe('Business directory pagination', () => {
     await screen.findByText('Cafe 11');
     expect(router.state.location.search).toBe('?page=2');
 
-    await router.navigate(-1);
+    await act(() => router.navigate(-1));
     expect(await screen.findByText('Cafe 01')).toBeInTheDocument();
     expect(router.state.location.search).toBe('');
   });
