@@ -8,6 +8,8 @@ type SessionContextValue = {
   state: SessionState;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  // REQ-3.2.2 the name in the header and greeting follows a profile update
+  updateUser: (user: User) => void;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -61,7 +63,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setState({ status: 'signedOut' });
   }, []);
 
-  const value = useMemo(() => ({ state, signIn, signOut }), [state, signIn, signOut]);
+  const updateUser = useCallback((user: User) => {
+    setState((current) => (current.status === 'signedIn' ? { status: 'signedIn', user } : current));
+  }, []);
+
+  const value = useMemo(() => ({ state, signIn, signOut, updateUser }), [state, signIn, signOut, updateUser]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

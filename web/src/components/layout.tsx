@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router';
 
 import { ApiError } from '../lib/api';
+import { useRouteChrome } from '../lib/route-chrome';
 import { useSession } from '../lib/session';
 import { ErrorBanner } from './error-banner';
 import { Spinner } from './spinner';
@@ -13,6 +14,7 @@ export function Layout() {
   const { state, signOut } = useSession();
   const navigate = useNavigate();
   const [logoutError, setLogoutError] = useState('');
+  useRouteChrome();
 
   async function logOut() {
     setLogoutError('');
@@ -43,10 +45,19 @@ export function Layout() {
                   Home
                 </NavLink>
               </li>
+              <li>
+                <NavLink to="/businesses">Businesses</NavLink>
+              </li>
+              <li>
+                <NavLink to="/events">Events</NavLink>
+              </li>
               {state.status === 'signedIn' && (
                 <>
                   <li>
                     <NavLink to="/dashboard">Dashboard</NavLink>
+                  </li>
+                  <li>
+                    <NavLink to="/profile">Profile</NavLink>
                   </li>
                   <li>
                     <button type="button" className="link-button" onClick={logOut}>

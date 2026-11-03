@@ -224,6 +224,226 @@ main:focus {
   color: var(--text-secondary);
 }
 
+/* Cards in a responsive grid, such as the business directory */
+.card-grid {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0 var(--space-4);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-3);
+}
+
+.card {
+  height: 100%;
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.card h2 {
+  margin: 0 0 var(--space-1);
+  font-size: 1.125rem;
+}
+
+.card__meta {
+  margin: 0 0 var(--space-2);
+  color: var(--text-secondary);
+}
+
+.card p:last-child {
+  margin-bottom: 0;
+}
+
+/* The hours section of the business form: one row per day */
+.hours-field {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.hours-field legend {
+  padding: 0 var(--space-2);
+  font-weight: 600;
+}
+
+.hours-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+
+.hours-row__day {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 9rem;
+}
+
+.hours-row input[type='checkbox'] {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.hours-row input[type='time'] {
+  min-height: 44px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.hours-row input[type='time']:disabled {
+  opacity: 0.55;
+}
+
+.page-actions {
+  margin: var(--space-3) 0;
+}
+
+/* Category filter: a row of toggle buttons ("chips"), the pressed one filled in */
+.filter {
+  margin: var(--space-3) 0;
+}
+
+.filter__label {
+  margin: 0 0 var(--space-2);
+  font-weight: 600;
+}
+
+.filter__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.chip:hover {
+  background: var(--surface-selected);
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 600;
+}
+
+.chip:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Page navigation under a list: Previous, the page numbers, Next */
+.pagination {
+  margin: var(--space-4) 0;
+}
+
+.pagination__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pagination__gap {
+  padding: 0 var(--space-1);
+}
+
+.pagination .chip {
+  min-width: 44px;
+}
+
+.pagination .chip[aria-current='page'] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 600;
+}
+
+.pagination .chip[aria-disabled='true'] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* The search box and its button side by side, wrapping on narrow screens */
+.search-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.search-form__row .field__control {
+  flex: 1 1 14rem;
+}
+
+/* Opening hours: a day on the left, its hours on the right */
+.hours {
+  border-collapse: collapse;
+  margin: var(--space-2) 0 var(--space-4);
+}
+
+.hours th,
+.hours td {
+  padding: var(--space-1) var(--space-4) var(--space-1) 0;
+  text-align: left;
+}
+
+.hours td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Label and value pairs, such as the profile */
+.details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-4) 0;
+}
+
+.details dt {
+  color: var(--text-secondary);
+}
+
+.details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 30rem) {
+  .details {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .details dd {
+    margin-bottom: var(--space-3);
+  }
+}
+
 .form {
   display: flex;
   flex-direction: column;
@@ -258,7 +478,9 @@ main:focus {
   border-color: var(--error);
 }
 
-.field input {
+.field input,
+.field select,
+.field textarea {
   flex: 1;
   min-width: 0;
   min-height: 44px;
@@ -271,8 +493,15 @@ main:focus {
 }
 
 /* The wrapper draws the focus ring for the input and the toggle together */
-.field input:focus-visible {
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible {
   outline: none;
+}
+
+.field textarea {
+  min-height: 8rem;
+  resize: vertical;
 }
 
 .field__toggle {

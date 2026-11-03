@@ -4,6 +4,9 @@ import express, { type ErrorRequestHandler } from 'express';
 import { csrfProtection } from './middleware/csrf';
 import { securityHeaders } from './middleware/security-headers';
 import { authRouter } from './routes/auth';
+import { businessesRouter } from './routes/businesses';
+import { eventsRouter } from './routes/events';
+import { categoriesRouter } from './routes/categories';
 import { passwordResetRouter } from './routes/password-reset';
 import { usersRouter } from './routes/users';
 
@@ -46,6 +49,9 @@ export function createApp({ webDist }: { webDist?: string } = {}) {
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });
   });
+  app.use('/api/businesses', businessesRouter);
+  app.use('/api/events', eventsRouter);
+  app.use('/api/categories', categoriesRouter);
   app.use('/api/users', usersRouter);
   app.use('/api/auth', authRouter);
   app.use('/api/auth', passwordResetRouter);

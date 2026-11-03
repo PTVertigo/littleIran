@@ -4,6 +4,7 @@ export type User = {
   firstName: string;
   lastName: string;
   role: 'user' | 'admin';
+  status: 'active' | 'inactive';
   createdAt: string;
 };
 
@@ -19,7 +20,7 @@ export class ApiError extends Error {
 }
 
 type RequestOptions = {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PUT';
   body?: object;
 };
 

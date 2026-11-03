@@ -14,6 +14,8 @@ export function browser(app: Express, session?: string) {
     get: (path: string) => request(app).get(path).set('Cookie', cookie),
     post: (path: string) =>
       request(app).post(path).set('Cookie', cookie).set(CSRF_HEADER, CSRF_TOKEN),
+    put: (path: string) =>
+      request(app).put(path).set('Cookie', cookie).set(CSRF_HEADER, CSRF_TOKEN),
   };
 }
 

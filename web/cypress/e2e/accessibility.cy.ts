@@ -32,6 +32,8 @@ function logIn() {
 
 const publicPages = [
   ['home', '/'],
+  ['business directory', '/businesses'],
+  ['events', '/events'],
   ['login', '/login'],
   ['register', '/register'],
   ['forgot password', '/forgot-password'],
@@ -52,6 +54,133 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
 
   it('dashboard has no violations', () => {
     logIn();
+    expectNoViolations();
+  });
+
+  it('business directory filtered by a category has no violations', () => {
+    cy.visit('/businesses?category=Retail');
+    // Wait for the buttons and the results, so the pressed button's colours are what gets scanned
+    cy.get('.chip[aria-pressed="true"]').should('contain', 'Retail');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
+  it('second page of the business directory has no violations', () => {
+    cy.visit('/businesses?page=2');
+    cy.get('nav[aria-label="Business pages"] [aria-current="page"]').should('have.text', '2');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
+  it('business search results have no violations', () => {
+    cy.visit('/businesses?search=restaurant');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
+  it('business search with no results has no violations', () => {
+    cy.visit('/businesses?search=zzzzzz');
+    cy.contains('No businesses match');
+    expectNoViolations();
+  });
+
+  it('add a business page has no violations', () => {
+    logIn();
+    cy.visit('/businesses/new');
+    cy.contains('h1', 'Add a business');
+    cy.get('select').should('be.visible');
+    expectNoViolations();
+  });
+
+  it('add a business page showing its errors has no violations', () => {
+    logIn();
+    cy.visit('/businesses/new');
+    cy.get('select').should('be.visible');
+    cy.contains('button', 'Submit for review').click();
+    cy.get('.field__error').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
+  it('second page of the events has no violations', () => {
+    cy.visit('/events?page=2');
+    cy.get('nav[aria-label="Event pages"] [aria-current="page"]').should('have.text', '2');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
+  it('events filtered by a category have no violations', () => {
+    cy.visit('/events?category=Cultural%20Events');
+    // Wait for the buttons and the results, so the pressed button's colours are what gets scanned
+    cy.get('.chip[aria-pressed="true"]').should('contain', 'Cultural Events');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
+  it('event search results have no violations', () => {
+    cy.visit('/events?search=persian');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
+  it('event search with no results has no violations', () => {
+    cy.visit('/events?search=zzzzzz');
+    cy.contains('No events match');
+    expectNoViolations();
+  });
+
+  it('add an event page has no violations', () => {
+    logIn();
+    cy.visit('/events/new');
+    cy.contains('h1', 'Add an event');
+    cy.get('select').should('be.visible');
+    expectNoViolations();
+  });
+
+  it('add an event page showing its errors has no violations', () => {
+    logIn();
+    cy.visit('/events/new');
+    cy.get('select').should('be.visible');
+    cy.contains('button', 'Submit for review').click();
+    cy.get('.field__error').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
+  it('business detail page has no violations', () => {
+    cy.request('/api/businesses').its('body.businesses.0.id').then((id) => {
+      cy.visit(`/businesses/${id}`);
+      cy.contains('h2', 'Contact');
+      expectNoViolations();
+    });
+  });
+
+  it('event detail page has no violations', () => {
+    cy.request('/api/events').its('body.events.0.id').then((id) => {
+      cy.visit(`/events/${id}`);
+      cy.contains('h2', 'Organizer');
+      expectNoViolations();
+    });
+  });
+
+  it('profile page has no violations', () => {
+    logIn();
+    cy.visit('/profile');
+    cy.contains('dt', 'Email');
+    expectNoViolations();
+  });
+
+  it('public profile page has no violations', () => {
+    logIn();
+    cy.request('/api/users/me').its('body.user.id').then((id) => {
+      cy.visit(`/users/${id}`);
+      cy.contains('dt', 'Submissions');
+      expectNoViolations();
+    });
+  });
+
+  it('edit profile page has no violations', () => {
+    logIn();
+    cy.visit('/profile/edit');
+    cy.contains('h1', 'Edit profile');
     expectNoViolations();
   });
 
@@ -110,6 +239,35 @@ describe('Accessibility in dark mode', () => {
       cy.get('main h1').should('be.visible');
       expectNoViolations();
     });
+  });
+
+  it('business directory filtered by a category has no violations', () => {
+    cy.visit('/businesses?category=Retail');
+    // Wait for the buttons and the results, so the pressed button's colours are what gets scanned
+    cy.get('.chip[aria-pressed="true"]').should('contain', 'Retail');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
+  it('second page of the business directory has no violations', () => {
+    cy.visit('/businesses?page=2');
+    cy.get('nav[aria-label="Business pages"] [aria-current="page"]').should('have.text', '2');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
+  it('second page of the events has no violations', () => {
+    cy.visit('/events?page=2');
+    cy.get('nav[aria-label="Event pages"] [aria-current="page"]').should('have.text', '2');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
+  it('events filtered by a category have no violations', () => {
+    cy.visit('/events?category=Cultural%20Events');
+    cy.get('.chip[aria-pressed="true"]').should('contain', 'Cultural Events');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
   });
 
   it('a form showing its errors has no violations', () => {
