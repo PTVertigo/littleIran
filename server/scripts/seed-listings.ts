@@ -1,10 +1,11 @@
 import 'dotenv/config';
 import { pool } from '../src/db';
 
-// Sample approved business listings, so browse, search, filter and pagination have something to show
-// before the admin approval flow exists. Every name, phone number and address is made up, the emails
-// and websites use the reserved example.com domain, and the listings belong to no account.
-// Safe to re-run: a business whose name is already there is skipped.
+// Sample approved business listings and events, so browse, search, filter and pagination have something
+// to show before the admin approval flow exists. Every name, phone number and address is made up, the
+// emails and websites use the reserved example.com domain, and the listings belong to no account.
+// Event dates are counted from the day the script runs, so there are always upcoming events (and two
+// past ones). Safe to re-run: a business or event whose name is already there is skipped.
 type Sample = {
   name: string;
   category: string;
@@ -37,6 +38,36 @@ const SAMPLES: Sample[] = [
   { name: 'Damavand Immigration Consulting', category: 'Professional Services', description: 'Guidance on settlement, study permits and citizenship applications.', street: '1 Sample Street', city: 'Toronto', postalCode: 'M2N 5N4', phone: '416-555-0113', hours: [[WEEKDAYS, '09:30', '17:30']] },
   { name: 'Setar Music Academy', category: 'Entertainment', description: 'Lessons in setar, tar, santur and Persian vocals for all ages.', street: '36 Example Road', city: 'Toronto', postalCode: 'M5T 1P5', phone: '416-555-0114', website: 'https://example.com/setar', hours: [[[2, 3, 4, 5, 6], '15:00', '20:00']] },
   { name: 'Hafez Wellness Clinic', category: 'Health & Wellness', description: 'Physiotherapy, massage and nutrition counselling.', street: '420 Demo Avenue', city: 'Burlington', postalCode: 'L7L 6R6', phone: '905-555-0115', hours: [[WEEKDAYS, '08:00', '18:00']] },
+];
+
+// startsInDays counts from today (negative is the past); the event starts at the given hour, Toronto time
+type EventSample = {
+  title: string;
+  category: string;
+  description: string;
+  location: string;
+  startsInDays: number;
+  hour: number;
+  hours: number;
+  organizer: string;
+  contact: string;
+};
+
+const EVENT_SAMPLES: EventSample[] = [
+  { title: 'Norouz Festival', category: 'Festival', description: 'Haft-sin tables, live music and food stalls to welcome the Persian New Year.', location: 'Hamilton Convention Centre, 1 Sample Street, Hamilton', startsInDays: 12, hour: 11, hours: 8, organizer: 'Hamilton Iranian Association', contact: 'hello@hamilton-iranian.example.com' },
+  { title: 'Yalda Night Celebration', category: 'Celebration', description: 'Pomegranates, poetry from Hafez and a long night of music for the winter solstice.', location: 'Mississauga Banquet Hall, 45 Example Road, Mississauga', startsInDays: 20, hour: 19, hours: 5, organizer: 'Peel Persian Community', contact: 'info@peel-persian.example.com' },
+  { title: 'Persian Calligraphy Workshop', category: 'Workshop', description: 'Learn the basics of nastaliq with a master calligrapher. All materials are included.', location: 'Toronto Cultural Hub, 88 Demo Avenue, Toronto', startsInDays: 5, hour: 14, hours: 3, organizer: 'Tehran Books & Crafts', contact: 'workshops@tehran-books.example.com' },
+  { title: 'Persian Cooking Class: Ghormeh Sabzi', category: 'Workshop', description: 'Cook a pot of ghormeh sabzi from scratch and share it at the table afterwards.', location: 'Darband Kitchen Studio, 45 Example Road, Mississauga', startsInDays: 9, hour: 17, hours: 3, organizer: 'Darband Restaurant', contact: 'classes@darband.example.com' },
+  { title: 'Introduction to the Farsi Language', category: 'Educational', description: 'A free first lesson in reading, writing and everyday phrases, for beginners.', location: 'Burlington Public Library, 301 Example Road, Burlington', startsInDays: 7, hour: 18, hours: 2, organizer: 'Farsi Learners Ontario', contact: 'learn@farsi-ontario.example.com' },
+  { title: 'Settling in Ontario: A Newcomer Information Evening', category: 'Educational', description: 'Short talks on housing, work and schooling, followed by questions in English and Farsi.', location: 'Richmond Hill Community Centre, 500 Demo Avenue, Richmond Hill', startsInDays: 15, hour: 18, hours: 3, organizer: 'Damavand Immigration Consulting', contact: 'events@damavand.example.com' },
+  { title: 'Tea and Backgammon Afternoon', category: 'Social Gathering', description: 'Meet neighbours over tea and a few games of backgammon. Boards provided.', location: 'Persepolis Cafe, 17 Demo Avenue, Toronto', startsInDays: 3, hour: 15, hours: 3, organizer: 'Persepolis Cafe', contact: 'cafe@persepolis.example.com' },
+  { title: 'Community Picnic in the Park', category: 'Social Gathering', description: 'Bring a dish to share. Games for the children and a soccer match in the afternoon.', location: 'Bayfront Park, Hamilton', startsInDays: 30, hour: 12, hours: 5, organizer: 'Hamilton Iranian Association', contact: 'hello@hamilton-iranian.example.com' },
+  { title: 'Evening of Persian Classical Music', category: 'Cultural Events', description: 'Setar, tar and santur with vocals, performed by students and teachers of the academy.', location: 'Setar Music Academy, 36 Example Road, Toronto', startsInDays: 10, hour: 19, hours: 2, organizer: 'Setar Music Academy', contact: 'concerts@setar.example.com' },
+  { title: 'Shahnameh Poetry Reading', category: 'Cultural Events', description: 'Readings from Ferdowsi in Farsi with English summaries between the stories.', location: 'Toronto Cultural Hub, 88 Demo Avenue, Toronto', startsInDays: 18, hour: 19, hours: 2, organizer: 'Toronto Persian Literature Circle', contact: 'readings@persian-literature.example.com' },
+  { title: 'Persian Film Night', category: 'Cultural Events', description: 'A screening of a classic Iranian film with English subtitles and a short discussion.', location: 'Oakville Arts Centre, 9 Example Road, Oakville', startsInDays: 25, hour: 19, hours: 3, organizer: 'Pars Rug Gallery', contact: 'films@pars.example.com' },
+  { title: 'Chaharshanbe Suri Bonfire', category: 'Festival', description: 'The traditional fire-jumping festival before Norouz, with music and sweets.', location: 'Bronte Beach Park, Oakville', startsInDays: 40, hour: 18, hours: 4, organizer: 'Oakville Persian Society', contact: 'suri@oakville-persian.example.com' },
+  { title: 'Mehregan Autumn Festival', category: 'Festival', description: 'An autumn harvest celebration with food, dance and a market of Persian goods.', location: 'Mississauga Banquet Hall, 45 Example Road, Mississauga', startsInDays: -20, hour: 12, hours: 6, organizer: 'Peel Persian Community', contact: 'info@peel-persian.example.com' },
+  { title: 'Sizdah Bedar Family Day', category: 'Celebration', description: 'Spend the thirteenth day of the new year outdoors with food, music and games.', location: 'Spencer Smith Park, Burlington', startsInDays: -45, hour: 11, hours: 6, organizer: 'Burlington Iranian Families', contact: 'families@burlington-iranian.example.com' },
 ];
 
 async function seedListings() {
@@ -88,7 +119,31 @@ async function seedListings() {
   console.log(`added ${added} sample businesses, ${SAMPLES.length - added} were already there`);
 }
 
+async function seedEvents() {
+  let added = 0;
+  for (const sample of EVENT_SAMPLES) {
+    const existing = await pool.query('SELECT 1 FROM events WHERE title = $1', [sample.title]);
+    if (existing.rowCount) continue;
+
+    // Today in Toronto plus the number of days, at the hour given in Toronto time
+    const { rowCount } = await pool.query(
+      `INSERT INTO events
+         (category_id, title, description, location, starts_at, ends_at, organizer_name, organizer_contact, status)
+       SELECT c.id, $2, $3, $4,
+              ((now() AT TIME ZONE 'America/Toronto')::date + $5::int + make_interval(hours => $6::int)) AT TIME ZONE 'America/Toronto',
+              ((now() AT TIME ZONE 'America/Toronto')::date + $5::int + make_interval(hours => $6::int + $7::int)) AT TIME ZONE 'America/Toronto',
+              $8, $9, 'approved'
+       FROM categories c WHERE c.type = 'event' AND c.name = $1`,
+      [sample.category, sample.title, sample.description, sample.location, sample.startsInDays, sample.hour, sample.hours, sample.organizer, sample.contact],
+    );
+    if (!rowCount) throw new Error(`Unknown event category: ${sample.category}`);
+    added += 1;
+  }
+  console.log(`added ${added} sample events, ${EVENT_SAMPLES.length - added} were already there`);
+}
+
 seedListings()
+  .then(seedEvents)
   .catch((err) => {
     console.error(err);
     process.exitCode = 1;

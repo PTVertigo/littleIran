@@ -33,6 +33,7 @@ function logIn() {
 const publicPages = [
   ['home', '/'],
   ['business directory', '/businesses'],
+  ['events', '/events'],
   ['login', '/login'],
   ['register', '/register'],
   ['forgot password', '/forgot-password'],

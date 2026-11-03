@@ -10,6 +10,9 @@ export function HomePage() {
       <p>
         <Link to="/businesses" className="button">
           Browse businesses
+        </Link>{' '}
+        <Link to="/events" className="button">
+          Browse events
         </Link>
       </p>
     </section>

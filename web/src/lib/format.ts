@@ -18,3 +18,17 @@ export function safeWebUrl(value: string | null): string | null {
     return null;
   }
 }
+
+const EVENT_ZONE = 'America/Toronto';
+const dateFormat = new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric', timeZone: EVENT_ZONE });
+const clockFormat = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: EVENT_ZONE });
+
+// An instant from the API ("2026-12-12T23:00:00.000Z") as Ontario reads it: "Sat, December 12, 2026, 6:00 PM".
+// Events are in Southern Ontario, so every visitor sees the time on the clocks there. The time is built
+// from its parts, because the built-in time text differs between browsers (some put a narrow space before PM).
+export function formatDateTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const clock = Object.fromEntries(clockFormat.formatToParts(date).map((p) => [p.type, p.value]));
+  return `${dateFormat.format(date)}, ${formatTime(`${clock.hour}:${clock.minute}`)}`;
+}

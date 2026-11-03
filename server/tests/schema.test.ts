@@ -233,10 +233,30 @@ describe('Sample business listings (npm run seed:listings)', () => {
   it('can be run twice without adding anything the second time', async () => {
     runSeed();
     const before = (await pool.query('SELECT count(*)::int AS n FROM businesses')).rows[0].n;
+    const eventsBefore = (await pool.query('SELECT count(*)::int AS n FROM events')).rows[0].n;
 
     const output = runSeed();
 
     expect((await pool.query('SELECT count(*)::int AS n FROM businesses')).rows[0].n).toBe(before);
+    expect((await pool.query('SELECT count(*)::int AS n FROM events')).rows[0].n).toBe(eventsBefore);
     expect(output).toContain('added 0 sample businesses');
+    expect(output).toContain('added 0 sample events');
+  });
+
+  it('adds approved events across every event category, enough for a second page, mostly still to come', async () => {
+    runSeed();
+
+    const { rows } = await pool.query(
+      `SELECT e.status, e.user_id, e.starts_at, e.ends_at, e.organizer_contact, c.name AS category
+       FROM events e JOIN categories c ON c.id = e.category_id`,
+    );
+    expect(rows.length).toBeGreaterThan(10);
+    expect(rows.every((e) => e.status === 'approved' && e.user_id === null)).toBe(true);
+    expect(rows.every((e) => e.organizer_contact.endsWith('.example.com'))).toBe(true);
+    expect(rows.every((e) => e.ends_at > e.starts_at)).toBe(true);
+    expect(new Set(rows.map((e) => e.category)).size).toBe(6);
+    expect(rows.filter((e) => e.starts_at > new Date()).length).toBeGreaterThan(10);
+    expect(rows.filter((e) => e.ends_at < new Date()).length).toBeGreaterThanOrEqual(1);
+    expect(rows.filter((e) => e.category === 'Cultural Events').length).toBeGreaterThanOrEqual(3);
   });
 });

@@ -1,4 +1,4 @@
-import { DAY_NAMES, formatTime, safeWebUrl } from './format';
+import { DAY_NAMES, formatDateTime, formatTime, safeWebUrl } from './format';
 
 describe('formatTime', () => {
   it.each([
@@ -43,5 +43,30 @@ describe('safeWebUrl', () => {
     null,
   ])('does not turn %p into a link', (value) => {
     expect(safeWebUrl(value)).toBeNull();
+  });
+});
+
+describe('formatDateTime', () => {
+  it('writes the date and time as Ontario reads them', () => {
+    expect(formatDateTime('2026-12-12T16:00:00.000Z')).toBe('Sat, December 12, 2026, 11:00 AM');
+  });
+
+  it('uses Ontario time, so the day can differ from UTC', () => {
+    expect(formatDateTime('2026-12-21T00:30:00.000Z')).toBe('Sun, December 20, 2026, 7:30 PM');
+  });
+
+  it('follows daylight saving time: the same 3 pm UTC is 11 am in summer and 10 am in winter', () => {
+    expect(formatDateTime('2026-07-01T15:00:00.000Z')).toBe('Wed, July 1, 2026, 11:00 AM');
+    expect(formatDateTime('2026-01-15T15:00:00.000Z')).toBe('Thu, January 15, 2026, 10:00 AM');
+  });
+
+  it('writes midnight as 12:00 AM and noon as 12:00 PM', () => {
+    expect(formatDateTime('2026-12-12T05:00:00.000Z')).toBe('Sat, December 12, 2026, 12:00 AM');
+    expect(formatDateTime('2026-12-12T17:00:00.000Z')).toBe('Sat, December 12, 2026, 12:00 PM');
+  });
+
+  it('gives an empty string for something that is not a date', () => {
+    expect(formatDateTime('soon')).toBe('');
+    expect(formatDateTime('')).toBe('');
   });
 });

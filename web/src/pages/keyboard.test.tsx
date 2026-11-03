@@ -17,6 +17,7 @@ describe('Keyboard navigation', () => {
       'LittleIran',
       'Home',
       'Businesses',
+      'Events',
       'Log in',
       'Sign up',
       'Email',

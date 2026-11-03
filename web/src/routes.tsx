@@ -4,6 +4,7 @@ import { Layout } from './components/layout';
 import { GuestOnly, RequireAuth } from './components/route-guards';
 import { BusinessDetailPage } from './pages/business-detail';
 import { BusinessesPage } from './pages/businesses';
+import { EventsPage } from './pages/events';
 import { ChangePasswordPage } from './pages/change-password';
 import { DashboardPage } from './pages/dashboard';
 import { EditProfilePage } from './pages/edit-profile';
@@ -29,6 +30,7 @@ export const routes: RouteObject[] = [
           // Approved listings are public, so no login is needed to browse them
           { path: 'businesses', element: <BusinessesPage /> },
           { path: 'businesses/:id', element: <BusinessDetailPage /> },
+          { path: 'events', element: <EventsPage /> },
           {
             element: <GuestOnly />,
             children: [
