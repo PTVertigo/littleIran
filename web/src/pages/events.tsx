@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
+import { CategoryFilter } from '../components/category-filter';
 import { ErrorBanner } from '../components/error-banner';
 import { Spinner } from '../components/spinner';
 import { ApiError, apiRequest } from '../lib/api';
@@ -20,11 +21,12 @@ const SEARCH_MAX_LENGTH = 100;
 
 // Screen 4 (cultural events). REQ-3.4.1 every approved event, open to everyone: events still to come
 // first, soonest first, then the ones that have finished. REQ-3.7.2 narrowed by words in the name or
-// category. The search lives in the address (?search=...), so a result can be shared and the back button
-// returns to the previous one.
+// category; REQ-3.7.5 narrowed to one category. Both live in the address (?search=...&category=...), so a
+// result can be shared and the back button returns to the previous one.
 export function EventsPage() {
   const [params, setParams] = useSearchParams();
   const search = (params.get('search') ?? '').trim();
+  const category = (params.get('category') ?? '').trim();
   const [query, setQuery] = useState(search);
   const [shownSearch, setShownSearch] = useState(search);
   const inputId = useId();
@@ -36,16 +38,19 @@ export function EventsPage() {
     setQuery(search);
   }
 
-  function update(text: string) {
+  // Changes the search or the category and leaves the other as it was; an empty value removes it
+  function update(change: { search?: string; category?: string }) {
     const next = new URLSearchParams(params);
-    if (text) next.set('search', text);
-    else next.delete('search');
+    for (const [key, value] of Object.entries(change)) {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    }
     setParams(next);
   }
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    update(query.trim());
+    update({ search: query.trim() });
   }
 
   return (
@@ -82,34 +87,61 @@ export function EventsPage() {
         </div>
       </form>
 
-      <EventList key={search} search={search} onClearSearch={() => update('')} />
+      <CategoryFilter type="event" selected={category} onSelect={(name) => update({ category: name })} />
+
+      <EventList
+        key={`${search}|${category}`}
+        search={search}
+        category={category}
+        onClearSearch={() => update({ search: '' })}
+        onClearCategory={() => update({ category: '' })}
+      />
     </section>
   );
 }
 
-// Keyed by the search, so each search starts from a clean state and shows its own loading indicator
-function EventList({ search, onClearSearch }: { search: string; onClearSearch: () => void }) {
+type ListProps = { search: string; category: string; onClearSearch: () => void; onClearCategory: () => void };
+
+// Keyed by the search and the category, so each change starts from a clean state and shows its own loading indicator
+function EventList({ search, category, onClearSearch, onClearCategory }: ListProps) {
   const [events, setEvents] = useState<CulturalEvent[] | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const query = search ? `?${new URLSearchParams({ search })}` : '';
+    const filters = new URLSearchParams();
+    if (search) filters.set('search', search);
+    if (category) filters.set('category', category);
+    const query = filters.size > 0 ? `?${filters}` : '';
     apiRequest<{ events: CulturalEvent[] }>(`/api/events${query}`)
       .then((body) => setEvents(body.events))
       .catch((err) => setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.'));
-  }, [search]);
+  }, [search, category]);
 
   if (error) return <ErrorBanner message={error} />;
   if (!events) return <Spinner label="Loading events" />;
   if (events.length === 0) {
-    if (!search) return <p>No events have been listed yet.</p>;
+    if (!search && !category) return <p>No events have been listed yet.</p>;
     return (
       <>
-        <p role="status">{`No events match “${search}”. Try a different word, or clear the search.`}</p>
+        <p role="status">
+          {search && category
+            ? `No events match “${search}” in ${category}. Try a different word or category.`
+            : search
+              ? `No events match “${search}”. Try a different word, or clear the search.`
+              : `No events in ${category} yet.`}
+        </p>
         <p>
-          <button type="button" className="link-button" onClick={onClearSearch}>
-            Clear search
-          </button>
+          {search && (
+            <button type="button" className="link-button" onClick={onClearSearch}>
+              Clear search
+            </button>
+          )}
+          {search && category && ' · '}
+          {category && (
+            <button type="button" className="link-button" onClick={onClearCategory}>
+              Show all categories
+            </button>
+          )}
         </p>
       </>
     );
@@ -118,7 +150,7 @@ function EventList({ search, onClearSearch }: { search: string; onClearSearch: (
   return (
     <>
       {/* A status message, so a screen reader announces how many events there are */}
-      <p role="status">{`${events.length} ${events.length === 1 ? 'event' : 'events'}${search ? ` found for “${search}”` : ''}`}</p>
+      <p role="status">{`${events.length} ${events.length === 1 ? 'event' : 'events'}${search ? ` found for “${search}”` : ''}${category ? ` in ${category}` : ''}`}</p>
       <ul className="card-grid">
         {events.map((event) => (
           <li key={event.id}>

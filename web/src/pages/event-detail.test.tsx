@@ -154,7 +154,14 @@ describe('Event detail page', () => {
 
   it('is reached by clicking an event in the list, and the way back returns to the list', async () => {
     const summary = { id: '4', title: 'Norouz Festival', category: 'Festival', startsAt: event.startsAt, location: event.location, description: 'Music.', past: false };
-    mockFetch(signedOut, { status: 200, body: { events: [summary] } }, found(), { status: 200, body: { events: [summary] } });
+    mockFetch(
+      signedOut,
+      { status: 200, body: { categories: [{ id: '1', name: 'Festival' }] } },
+      { status: 200, body: { events: [summary] } },
+      found(),
+      { status: 200, body: { categories: [{ id: '1', name: 'Festival' }] } },
+      { status: 200, body: { events: [summary] } },
+    );
     renderApp('/events');
 
     await userEvent.click(await screen.findByRole('link', { name: 'Norouz Festival' }));

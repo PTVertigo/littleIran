@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { validateEvent } from '../event-validation';
 import { pool } from '../db';
 import { requireAuth } from '../middleware/auth';
-import { escapeLike, parseSearch } from '../search';
+import { escapeLike, parseCategoryFilter, parseSearch } from '../search';
 import { isRecordId } from '../validation';
 
 export const eventsRouter = Router();
@@ -11,6 +11,7 @@ export const eventsRouter = Router();
 // public. Events that have not finished come first, soonest first; finished ones follow, latest first.
 // Pending and rejected events never appear.
 // REQ-3.7.2 ?search=... narrows it to events whose name or category contains every word typed.
+// REQ-3.7.5 ?category=... narrows it to one category, by name. Both can be combined.
 eventsRouter.get('/', async (req, res) => {
   const search = parseSearch(req.query.search);
   if ('error' in search) {
@@ -18,9 +19,19 @@ eventsRouter.get('/', async (req, res) => {
     return;
   }
 
+  const filter = parseCategoryFilter(req.query.category);
+  if ('error' in filter) {
+    res.status(400).json({ error: filter.error });
+    return;
+  }
+
   // One condition per word, built only from parameter numbers. The words themselves are parameters.
-  const params = search.terms.map((term) => `%${escapeLike(term)}%`);
+  const params: string[] = search.terms.map((term) => `%${escapeLike(term)}%`);
   const conditions = params.map((_, i) => `AND (e.title ILIKE $${i + 1} OR c.name ILIKE $${i + 1})`);
+  if (filter.category) {
+    params.push(filter.category);
+    conditions.push(`AND lower(c.name) = lower($${params.length})`);
+  }
 
   const { rows } = await pool.query(
     `SELECT e.id, e.title, c.name AS category, e.starts_at AS "startsAt", e.location, e.description,

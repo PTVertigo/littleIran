@@ -15,12 +15,16 @@ const norouz = {
 };
 const yalda = { ...norouz, id: '2', title: 'Yalda Night', category: 'Celebration', startsAt: '2026-12-21T00:30:00.000Z', description: 'Poetry.' };
 const old = { ...norouz, id: '3', title: 'Mehregan Festival', startsAt: '2026-06-01T16:00:00.000Z', past: true };
+const filterCategories = {
+  status: 200,
+  body: { categories: [{ id: '1', name: 'Festival' }, { id: '2', name: 'Workshop' }, { id: '3', name: 'Cultural Events' }] },
+};
 const found = (events: object[]) => ({ status: 200, body: { events } });
 
 // REQ-3.4.1
 describe('Events page', () => {
   it('lists every event with its title, category, date and time, location and description', async () => {
-    const fetchMock = mockFetch(signedOut, found([norouz, yalda]));
+    const fetchMock = mockFetch(signedOut, filterCategories, found([norouz, yalda]));
     renderApp('/events');
 
     const cards = await screen.findAllByRole('article');
@@ -30,11 +34,11 @@ describe('Events page', () => {
     expect(within(cards[0]).getByText('Sat, December 12, 2026, 11:00 AM')).toBeInTheDocument();
     expect(within(cards[0]).getByText('Hamilton Convention Centre, Hamilton')).toBeInTheDocument();
     expect(within(cards[0]).getByText('Haft-sin tables and live music.')).toBeInTheDocument();
-    expect(fetchMock.mock.calls[1][0]).toBe('/api/events');
+    expect(fetchMock.mock.calls[2][0]).toBe('/api/events');
   });
 
   it('writes the time in Ontario time, even when the day is different in UTC', async () => {
-    mockFetch(signedOut, found([yalda]));
+    mockFetch(signedOut, filterCategories, found([yalda]));
     renderApp('/events');
 
     // 00:30 UTC on the 21st is 7:30 PM on the 20th in Ontario
@@ -42,7 +46,7 @@ describe('Events page', () => {
   });
 
   it('marks the date as a time element a machine can read', async () => {
-    mockFetch(signedOut, found([norouz]));
+    mockFetch(signedOut, filterCategories, found([norouz]));
     renderApp('/events');
 
     const time = await screen.findByText('Sat, December 12, 2026, 11:00 AM');
@@ -51,7 +55,7 @@ describe('Events page', () => {
   });
 
   it('keeps the order the server sent, and says which events are over', async () => {
-    mockFetch(signedOut, found([norouz, old]));
+    mockFetch(signedOut, filterCategories, found([norouz, old]));
     renderApp('/events');
 
     const cards = await screen.findAllByRole('article');
@@ -61,21 +65,21 @@ describe('Events page', () => {
   });
 
   it('announces how many events there are', async () => {
-    mockFetch(signedOut, found([norouz, yalda]));
+    mockFetch(signedOut, filterCategories, found([norouz, yalda]));
     renderApp('/events');
 
     expect(await screen.findByText('2 events')).toHaveAttribute('role', 'status');
   });
 
   it('says "1 event" for a single event', async () => {
-    mockFetch(signedOut, found([norouz]));
+    mockFetch(signedOut, filterCategories, found([norouz]));
     renderApp('/events');
 
     expect(await screen.findByText('1 event')).toBeInTheDocument();
   });
 
   it('says so when there are no events yet', async () => {
-    mockFetch(signedOut, found([]));
+    mockFetch(signedOut, filterCategories, found([]));
     renderApp('/events');
 
     expect(await screen.findByText('No events have been listed yet.')).toBeInTheDocument();
@@ -88,6 +92,7 @@ describe('Events page', () => {
     global.fetch = jest
       .fn()
       .mockResolvedValueOnce({ ok: false, status: 401, json: async () => signedOut.body })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => filterCategories.body })
       .mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
     renderApp('/events');
 
@@ -100,7 +105,7 @@ describe('Events page', () => {
 
   // REQ-4.2.1
   it('explains a failure in plain words', async () => {
-    mockFetch(signedOut, { status: 500, body: { error: 'Something went wrong. Please try again.' } });
+    mockFetch(signedOut, filterCategories, { status: 500, body: { error: 'Something went wrong. Please try again.' } });
     renderApp('/events');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong. Please try again.');
@@ -108,7 +113,7 @@ describe('Events page', () => {
 
   // REQ-4.1.3
   it('shows a title and description containing markup as plain text', async () => {
-    mockFetch(signedOut, found([{ ...norouz, title: '<script>alert(1)</script>', description: '<img src=x onerror=alert(1)>' }]));
+    mockFetch(signedOut, filterCategories, found([{ ...norouz, title: '<script>alert(1)</script>', description: '<img src=x onerror=alert(1)>' }]));
     renderApp('/events');
 
     expect(await screen.findByText('<img src=x onerror=alert(1)>')).toBeInTheDocument();
@@ -118,7 +123,7 @@ describe('Events page', () => {
   });
 
   it('is open to a visitor who is not logged in', async () => {
-    mockFetch(signedOut, found([norouz]));
+    mockFetch(signedOut, filterCategories, found([norouz]));
     const router = renderApp('/events');
 
     await screen.findByRole('article');
@@ -127,7 +132,7 @@ describe('Events page', () => {
 
   // REQ-4.4.2 reachable in one click
   it('is reached from the navigation and from the home page button', async () => {
-    mockFetch(signedOut, found([norouz]), found([norouz]));
+    mockFetch(signedOut, filterCategories, found([norouz]));
     renderApp('/');
 
     await userEvent.click(await screen.findByRole('link', { name: 'Browse events' }));
@@ -136,7 +141,7 @@ describe('Events page', () => {
   });
 
   it('has one main heading, and a heading for each event below it', async () => {
-    mockFetch(signedOut, found([norouz, yalda]));
+    mockFetch(signedOut, filterCategories, found([norouz, yalda]));
     renderApp('/events');
 
     await screen.findAllByRole('article');

@@ -232,7 +232,7 @@ describe('Add an event page', () => {
   });
 
   it("is reached from the events page's \"Add an event\" button", async () => {
-    mockFetch(signedIn, { status: 200, body: { events: [] } }, categories);
+    mockFetch(signedIn, categories, { status: 200, body: { events: [] } }, categories);
     renderApp('/events');
 
     await userEvent.click(await screen.findByRole('link', { name: 'Add an event' }));

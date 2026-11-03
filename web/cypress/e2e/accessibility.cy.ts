@@ -101,6 +101,14 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     expectNoViolations();
   });
 
+  it('events filtered by a category have no violations', () => {
+    cy.visit('/events?category=Cultural%20Events');
+    // Wait for the buttons and the results, so the pressed button's colours are what gets scanned
+    cy.get('.chip[aria-pressed="true"]').should('contain', 'Cultural Events');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
   it('event search results have no violations', () => {
     cy.visit('/events?search=persian');
     cy.get('article').should('have.length.at.least', 1);
@@ -237,6 +245,13 @@ describe('Accessibility in dark mode', () => {
   it('second page of the business directory has no violations', () => {
     cy.visit('/businesses?page=2');
     cy.get('nav[aria-label="Business pages"] [aria-current="page"]').should('have.text', '2');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
+  it('events filtered by a category have no violations', () => {
+    cy.visit('/events?category=Cultural%20Events');
+    cy.get('.chip[aria-pressed="true"]').should('contain', 'Cultural Events');
     cy.get('article').should('have.length.at.least', 1);
     expectNoViolations();
   });

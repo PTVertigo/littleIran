@@ -385,6 +385,121 @@ describe('GET /api/events?search=', () => {
   });
 });
 
+// REQ-3.7.5 / FE-004
+describe('GET /api/events?category=', () => {
+  const filter = (category: string, search?: string) =>
+    request(app).get('/api/events').query(search === undefined ? { category } : { category, search });
+
+  beforeEach(async () => {
+    await addEvent({ title: 'Norouz Festival', starts_at: inDays(5) }, 'Festival');
+    await addEvent({ title: 'Persian Calligraphy Workshop', starts_at: inDays(6) }, 'Workshop');
+    await addEvent({ title: 'Persian Film Night', starts_at: inDays(7) }, 'Cultural Events');
+    await addEvent({ title: 'Evening of Classical Music', starts_at: inDays(8) }, 'Cultural Events');
+    await addEvent({ title: 'Old Cultural Night', starts_at: inDays(-9) }, 'Cultural Events');
+  });
+
+  // FE-004: select 'Cultural Events' and only cultural events are displayed
+  it('lists only the events in that category', async () => {
+    const res = await filter('Cultural Events');
+
+    expect(res.status).toBe(200);
+    expect(titles(res)).toEqual(['Persian Film Night', 'Evening of Classical Music', 'Old Cultural Night']);
+    expect(res.body.events.every((e: { category: string }) => e.category === 'Cultural Events')).toBe(true);
+  });
+
+  it('matches the whole category name, ignoring case', async () => {
+    expect(titles(await filter('workshop'))).toEqual(['Persian Calligraphy Workshop']);
+    expect(titles(await filter('CULTURAL EVENTS'))).toHaveLength(3);
+    expect(titles(await filter('  Festival  '))).toEqual(['Norouz Festival']);
+    expect(titles(await filter('Cultural'))).toEqual([]);
+  });
+
+  it('keeps the events still to come before the finished ones', async () => {
+    const res = await filter('Cultural Events');
+
+    expect(res.body.events.map((e: { past: boolean }) => e.past)).toEqual([false, false, true]);
+  });
+
+  it('combines with the search: the event must be in the category and match every word', async () => {
+    expect(titles(await filter('Cultural Events', 'persian'))).toEqual(['Persian Film Night']);
+    expect(titles(await filter('Workshop', 'persian'))).toEqual(['Persian Calligraphy Workshop']);
+    expect(titles(await filter('Festival', 'persian'))).toEqual([]);
+    expect(titles(await filter('Cultural Events', 'music night'))).toEqual([]);
+  });
+
+  it('lists everything for an empty or blank category', async () => {
+    expect(titles(await filter(''))).toHaveLength(5);
+    expect(titles(await filter('   '))).toHaveLength(5);
+  });
+
+  it('answers with an empty list, not an error, for a category nobody has or that is for businesses', async () => {
+    for (const category of ['Grocery', 'Restaurant', 'Retail']) {
+      const res = await filter(category);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ events: [] });
+    }
+  });
+
+  it('answers with an empty list for an event category that has no events yet', async () => {
+    expect((await filter('Educational')).body).toEqual({ events: [] });
+  });
+
+  it('never returns a pending or rejected event, even in the category', async () => {
+    await addEvent({ title: 'Waiting Night', status: 'pending' }, 'Cultural Events');
+    await addEvent({ title: 'Refused Night', status: 'rejected', rejection_reason: 'No venue.' }, 'Cultural Events');
+
+    expect(titles(await filter('Cultural Events'))).toHaveLength(3);
+  });
+
+  // REQ-4.1.1 and API-004
+  it.each([
+    "'; DROP TABLE events;--",
+    "Workshop' OR '1'='1",
+    "' UNION SELECT id, email, password_hash, email, email, email, email FROM users--",
+    '"; SELECT pg_sleep(5);--',
+    '$1',
+    '%',
+    '_',
+  ])('treats the category %p as plain text, finds nothing, and changes nothing', async (attempt) => {
+    const started = Date.now();
+
+    const res = await filter(attempt);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ events: [] });
+    expect(Date.now() - started).toBeLessThan(4000);
+    expect((await pool.query('SELECT count(*)::int AS n FROM events')).rows[0].n).toBe(5);
+  });
+
+  it('refuses a category name over 100 characters', async () => {
+    const res = await filter('a'.repeat(101));
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'That category name is too long.' });
+  });
+
+  it('refuses more than one category', async () => {
+    const res = await request(app).get('/api/events?category=Workshop&category=Festival');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Choose a single category.' });
+  });
+
+  it('refuses a null character without a server error', async () => {
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const res = await request(app).get('/api/events?category=Work%00shop');
+
+    expect(res.status).toBe(400);
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
+  it('is open to a visitor who is not logged in', async () => {
+    expect((await filter('Workshop')).status).toBe(200);
+  });
+});
+
 // REQ-3.4 create an event
 describe('POST /api/events', () => {
   // A day about a month away, written as the organizer would pick it on a calendar

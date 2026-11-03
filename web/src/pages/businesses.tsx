@@ -1,13 +1,13 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
+import { CategoryFilter } from '../components/category-filter';
 import { ErrorBanner } from '../components/error-banner';
 import { Pagination } from '../components/pagination';
 import { Spinner } from '../components/spinner';
 import { ApiError, apiRequest } from '../lib/api';
 
 type Business = { id: string; name: string; category: string; city: string; description: string };
-type Category = { id: string; name: string };
 type Result = { businesses: Business[]; page: number; pageSize: number; total: number; totalPages: number };
 
 const SEARCH_MAX_LENGTH = 100;
@@ -84,7 +84,7 @@ export function BusinessesPage() {
         </div>
       </form>
 
-      <CategoryFilter selected={category} onSelect={(name) => update({ category: name })} />
+      <CategoryFilter type="business" selected={category} onSelect={(name) => update({ category: name })} />
 
       <BusinessList
         key={`${search}|${category}`}
@@ -96,47 +96,6 @@ export function BusinessesPage() {
         onClearCategory={() => update({ category: '' })}
       />
     </section>
-  );
-}
-
-// REQ-3.7.4 one button per business category, plus "All". The pressed one is the one in use.
-function CategoryFilter({ selected, onSelect }: { selected: string; onSelect: (name: string) => void }) {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const labelId = useId();
-
-  useEffect(() => {
-    apiRequest<{ categories: Category[] }>('/api/categories?type=business')
-      .then((body) => setCategories(body.categories))
-      // The directory works without the filter, so a failed request just leaves it out
-      .catch((err) => console.error(err));
-  }, []);
-
-  if (categories.length === 0) return null;
-
-  return (
-    <div role="group" aria-labelledby={labelId} className="filter">
-      <p id={labelId} className="filter__label">
-        Filter by category
-      </p>
-      <ul className="filter__list">
-        <li>
-          <button type="button" className="chip" aria-pressed={!selected} onClick={() => onSelect('')}>
-            All
-          </button>
-        </li>
-        {categories.map((category) => (
-          <li key={category.id}>
-            <button
-              type="button"
-              className="chip"
-              aria-pressed={selected.toLowerCase() === category.name.toLowerCase()}
-              onClick={() => onSelect(category.name)}>
-              {category.name}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }
 
