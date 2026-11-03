@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router';
 
 import { ApiError } from '../lib/api';
+import { useRouteChrome } from '../lib/route-chrome';
 import { useSession } from '../lib/session';
 import { ErrorBanner } from './error-banner';
 import { Spinner } from './spinner';
@@ -13,6 +14,7 @@ export function Layout() {
   const { state, signOut } = useSession();
   const navigate = useNavigate();
   const [logoutError, setLogoutError] = useState('');
+  useRouteChrome();
 
   async function logOut() {
     setLogoutError('');
