@@ -18,7 +18,8 @@ describe('Event detail', () => {
   });
 
   it('says when an event is over', () => {
-    cy.visit('/events');
+    // Finished events come last, so on the second page
+    cy.visit('/events?page=2');
     cy.contains('article h2 a', 'Mehregan Autumn Festival').click();
 
     cy.contains('Past event');

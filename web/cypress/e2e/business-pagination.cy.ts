@@ -55,7 +55,12 @@ describe('Business directory pagination', () => {
   it('can be used with the keyboard, and moves focus to the results line', () => {
     cy.visit('/businesses');
 
-    nav().contains('button', '2').focus().type('{enter}');
+    // In our runs headless Electron did not turn a Cypress key press into a click on a focused button, so the Enter and
+    // Space activation is covered by the React tests; here: it is a real button, the keyboard can focus it, and
+    // using it keeps (or moves) focus where a keyboard user needs it.
+    nav().contains('button', '2').should('match', 'button');
+    nav().contains('button', '2').should('not.have.attr', 'tabindex');
+    nav().contains('button', '2').focus().should('have.focus').click();
 
     cy.contains('[role="status"]', 'Page 2 of 2').should('have.focus');
   });
