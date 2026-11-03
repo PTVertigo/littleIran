@@ -1,4 +1,4 @@
-import { DAY_NAMES, formatDateTime, formatTime, safeWebUrl } from './format';
+import { DAY_NAMES, formatDateTime, formatEventWhen, formatTime, safeWebUrl } from './format';
 
 describe('formatTime', () => {
   it.each([
@@ -68,5 +68,27 @@ describe('formatDateTime', () => {
   it('gives an empty string for something that is not a date', () => {
     expect(formatDateTime('soon')).toBe('');
     expect(formatDateTime('')).toBe('');
+  });
+});
+
+describe('formatEventWhen', () => {
+  it('shows the start and the end time when the event ends the same day', () => {
+    expect(formatEventWhen('2026-12-12T16:00:00.000Z', '2026-12-13T00:00:00.000Z')).toBe('Sat, December 12, 2026, 11:00 AM – 7:00 PM');
+  });
+
+  it('uses the Ontario day, not the UTC day, to decide whether it ends the same day', () => {
+    // 7 pm to 10 pm in Ontario is across midnight in UTC
+    expect(formatEventWhen('2026-12-12T00:00:00.000Z', '2026-12-12T03:00:00.000Z')).toBe('Fri, December 11, 2026, 7:00 PM – 10:00 PM');
+  });
+
+  it('writes the whole end when it ends on another day', () => {
+    expect(formatEventWhen('2026-12-12T16:00:00.000Z', '2026-12-14T02:00:00.000Z')).toBe(
+      'Sat, December 12, 2026, 11:00 AM to Sun, December 13, 2026, 9:00 PM',
+    );
+  });
+
+  it('shows only the start without an end time, or with one that is not a date', () => {
+    expect(formatEventWhen('2026-12-12T16:00:00.000Z', null)).toBe('Sat, December 12, 2026, 11:00 AM');
+    expect(formatEventWhen('2026-12-12T16:00:00.000Z', 'later')).toBe('Sat, December 12, 2026, 11:00 AM');
   });
 });

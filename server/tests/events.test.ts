@@ -128,3 +128,102 @@ describe('GET /api/events', () => {
     expect(event.description).toBe('<img src=x onerror=alert(1)>');
   });
 });
+
+// REQ-3.4.2
+describe('GET /api/events/:id', () => {
+  const detail = (id: string) => request(app).get(`/api/events/${encodeURIComponent(id)}`);
+
+  it('returns the title, category, start and end, location, description and organizer', async () => {
+    const startsAt = inDays(10);
+    const endsAt = inDays(11);
+    const id = await addEvent(
+      {
+        title: 'Yalda Night',
+        description: 'Poetry and pomegranates.',
+        location: 'Mississauga Banquet Hall',
+        starts_at: startsAt,
+        ends_at: endsAt,
+        organizer_name: 'Peel Persian Community',
+        organizer_contact: 'info@peel.example.com',
+      },
+      'Celebration',
+    );
+
+    const res = await detail(id);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      event: {
+        id,
+        title: 'Yalda Night',
+        category: 'Celebration',
+        description: 'Poetry and pomegranates.',
+        location: 'Mississauga Banquet Hall',
+        startsAt: new Date(startsAt).toISOString(),
+        endsAt: new Date(endsAt).toISOString(),
+        organizerName: 'Peel Persian Community',
+        organizerContact: 'info@peel.example.com',
+        past: false,
+      },
+    });
+  });
+
+  it('answers null for the end when no end time was given', async () => {
+    const id = await addEvent();
+
+    expect((await detail(id)).body.event.endsAt).toBeNull();
+  });
+
+  it('marks a finished event as past', async () => {
+    const id = await addEvent({ starts_at: inDays(-3), ends_at: inDays(-2) });
+
+    expect((await detail(id)).body.event.past).toBe(true);
+  });
+
+  it('is open to a visitor who is not logged in', async () => {
+    const id = await addEvent();
+
+    expect((await detail(id)).status).toBe(200);
+  });
+
+  it('does not show who submitted the event', async () => {
+    const id = await addEvent();
+
+    expect(Object.keys((await detail(id)).body.event)).not.toContain('userId');
+    expect(JSON.stringify((await detail(id)).body)).not.toMatch(/user_id|userId/);
+  });
+
+  it.each(['pending', 'rejected'])('answers 404 for an event that is %s, like one that does not exist', async (status) => {
+    const id = await addEvent({ status, rejection_reason: status === 'rejected' ? 'No' : null });
+
+    const res = await detail(id);
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Event not found.' });
+  });
+
+  it('answers 404 for an id nobody has', async () => {
+    expect((await detail('999999')).status).toBe(404);
+  });
+
+  it.each(['abc', '0', '-1', '1.5', '1 OR 1=1', "1'; DROP TABLE events;--", '9'.repeat(30), '%00'])(
+    'answers 404 for the id %p and changes nothing',
+    async (value) => {
+      await addEvent();
+
+      const res = await detail(value);
+
+      expect(res.status).toBe(404);
+      expect((await pool.query('SELECT count(*)::int AS n FROM events')).rows[0].n).toBe(1);
+    },
+  );
+
+  it('returns text with markup as plain text for the page to escape', async () => {
+    const id = await addEvent({ title: '<b>x</b>', organizer_name: '<script>alert(1)</script>' });
+
+    const { event } = (await detail(id)).body;
+
+    expect(event.title).toBe('<b>x</b>');
+    expect(event.organizerName).toBe('<script>alert(1)</script>');
+  });
+});

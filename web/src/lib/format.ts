@@ -32,3 +32,14 @@ export function formatDateTime(iso: string): string {
   const clock = Object.fromEntries(clockFormat.formatToParts(date).map((p) => [p.type, p.value]));
   return `${dateFormat.format(date)}, ${formatTime(`${clock.hour}:${clock.minute}`)}`;
 }
+
+// When an event takes place: "Sat, December 12, 2026, 11:00 AM – 7:00 PM" when it ends the same day,
+// the end written in full when it ends on another day, and only the start when there is no end time
+export function formatEventWhen(startsAt: string, endsAt: string | null): string {
+  const start = formatDateTime(startsAt);
+  if (!endsAt) return start;
+  const end = formatDateTime(endsAt);
+  if (!end) return start;
+  const sameDay = dateFormat.format(new Date(startsAt)) === dateFormat.format(new Date(endsAt));
+  return sameDay ? `${start} – ${end.slice(end.lastIndexOf(', ') + 2)}` : `${start} to ${end}`;
+}

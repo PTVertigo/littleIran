@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 
 import { ErrorBanner } from '../components/error-banner';
 import { Spinner } from '../components/spinner';
@@ -49,7 +50,10 @@ function EventList() {
         {events.map((event) => (
           <li key={event.id}>
             <article className="card">
-              <h2>{event.title}</h2>
+              <h2>
+                {/* REQ-3.4.2 */}
+                <Link to={`/events/${event.id}`}>{event.title}</Link>
+              </h2>
               <p className="card__meta">
                 {event.category}
                 {event.past && ' · Past event'}

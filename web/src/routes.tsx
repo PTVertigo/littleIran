@@ -4,6 +4,7 @@ import { Layout } from './components/layout';
 import { GuestOnly, RequireAuth } from './components/route-guards';
 import { BusinessDetailPage } from './pages/business-detail';
 import { BusinessesPage } from './pages/businesses';
+import { EventDetailPage } from './pages/event-detail';
 import { EventsPage } from './pages/events';
 import { ChangePasswordPage } from './pages/change-password';
 import { DashboardPage } from './pages/dashboard';
@@ -31,6 +32,7 @@ export const routes: RouteObject[] = [
           { path: 'businesses', element: <BusinessesPage /> },
           { path: 'businesses/:id', element: <BusinessDetailPage /> },
           { path: 'events', element: <EventsPage /> },
+          { path: 'events/:id', element: <EventDetailPage /> },
           {
             element: <GuestOnly />,
             children: [

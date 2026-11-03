@@ -109,6 +109,14 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     });
   });
 
+  it('event detail page has no violations', () => {
+    cy.request('/api/events').its('body.events.0.id').then((id) => {
+      cy.visit(`/events/${id}`);
+      cy.contains('h2', 'Organizer');
+      expectNoViolations();
+    });
+  });
+
   it('profile page has no violations', () => {
     logIn();
     cy.visit('/profile');
