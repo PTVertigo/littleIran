@@ -25,3 +25,9 @@ export function mockFetch(...responses: { status: number; body?: object }[]) {
   global.fetch = fetchMock;
   return fetchMock;
 }
+
+// The body of GET /api/businesses: one page of listings, with the paging details the server adds
+export function businessPage(businesses: object[], paging: { page?: number; total?: number; totalPages?: number } = {}) {
+  const total = paging.total ?? businesses.length;
+  return { businesses, page: paging.page ?? 1, pageSize: 10, total, totalPages: paging.totalPages ?? Math.max(1, Math.ceil(total / 10)) };
+}

@@ -1,7 +1,7 @@
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { mockFetch, renderApp } from '../test/render';
+import { businessPage, mockFetch, renderApp } from '../test/render';
 
 const signedOut = { status: 401, body: { error: 'Please log in to continue.' } };
 const norouz = { id: '1', name: 'Norouz Restaurant', category: 'Restaurant', city: 'Hamilton', description: 'Kebabs.' };
@@ -18,7 +18,7 @@ const categories = {
     ],
   },
 };
-const list = (businesses = [norouz, cafe, rugs, clinic]) => ({ status: 200, body: { businesses } });
+const list = (businesses = [norouz, cafe, rugs, clinic]) => ({ status: 200, body: businessPage(businesses) });
 
 const filter = () => screen.getByRole('group', { name: 'Filter by category' });
 const chip = (name: string) => within(filter()).getByRole('button', { name });

@@ -1,13 +1,13 @@
 import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { mockFetch, renderApp } from '../test/render';
+import { businessPage, mockFetch, renderApp } from '../test/render';
 
 const signedOut = { status: 401, body: { error: 'Please log in to continue.' } };
 const norouz = { id: '1', name: 'Norouz Restaurant', category: 'Restaurant', city: 'Hamilton', description: 'Kebabs.' };
 const cafe = { id: '2', name: 'Persian Cafe', category: 'Restaurant', city: 'Toronto', description: 'Tea.' };
 const rugs = { id: '3', name: 'Persian Rug Gallery', category: 'Retail', city: 'Oakville', description: 'Rugs.' };
-const all = (businesses = [norouz, cafe, rugs]) => ({ status: 200, body: { businesses } });
+const all = (businesses = [norouz, cafe, rugs]) => ({ status: 200, body: businessPage(businesses) });
 
 const box = () => screen.getByRole('searchbox', { name: 'Search businesses' });
 const searchFor = async (text: string) => {

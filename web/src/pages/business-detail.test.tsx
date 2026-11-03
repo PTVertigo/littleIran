@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { mockFetch, renderApp } from '../test/render';
+import { businessPage, mockFetch, renderApp } from '../test/render';
 
 const signedOut = { status: 401, body: { error: 'Please log in to continue.' } };
 const business = {
@@ -169,7 +169,7 @@ describe('Business detail page', () => {
     mockFetch(
       signedOut,
       { status: 200, body: { categories: [{ id: '1', name: 'Retail' }] } },
-      { status: 200, body: { businesses: [{ id: '8', name: 'Pars Rug Gallery', category: 'Retail', city: 'Oakville', description: 'Rugs.' }] } },
+      { status: 200, body: businessPage([{ id: '8', name: 'Pars Rug Gallery', category: 'Retail', city: 'Oakville', description: 'Rugs.' }]) },
       found(),
     );
     renderApp('/businesses');

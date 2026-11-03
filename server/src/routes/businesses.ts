@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { validateBusiness } from '../business-validation';
 import { pool } from '../db';
 import { requireAuth } from '../middleware/auth';
+import { PAGE_SIZE, pageDetails, parsePage } from '../pagination';
 import { escapeLike, parseCategoryFilter, parseSearch } from '../search';
 import { isRecordId } from '../validation';
 
@@ -11,6 +12,7 @@ export const businessesRouter = Router();
 // a listing public. Only the basic information is listed; pending and rejected listings never appear.
 // REQ-3.7.1 ?search=... narrows it to businesses whose name or category contains every word typed.
 // REQ-3.7.4 ?category=... narrows it to one category, by name. Both can be combined.
+// REQ-3.7.7 ?page=... picks one page of 10; the answer also says how many businesses there are in all.
 businessesRouter.get('/', async (req, res) => {
   const search = parseSearch(req.query.search);
   if ('error' in search) {
@@ -22,6 +24,11 @@ businessesRouter.get('/', async (req, res) => {
     res.status(400).json({ error: filter.error });
     return;
   }
+  const paging = parsePage(req.query.page);
+  if ('error' in paging) {
+    res.status(400).json({ error: paging.error });
+    return;
+  }
 
   // One condition per word, built only from parameter numbers. The words themselves are parameters.
   const params: string[] = search.terms.map((term) => `%${escapeLike(term)}%`);
@@ -31,14 +38,18 @@ businessesRouter.get('/', async (req, res) => {
     conditions.push(`AND lower(c.name) = lower($${params.length})`);
   }
 
+  const where = `WHERE b.status = 'approved' ${conditions.join(' ')}`;
+  const from = 'FROM businesses b JOIN categories c ON c.id = b.category_id';
+  const count = await pool.query<{ total: number }>(`SELECT count(*)::int AS total ${from} ${where}`, params);
+
   const { rows } = await pool.query(
     `SELECT b.id, b.name, c.name AS category, b.city, b.description
-     FROM businesses b JOIN categories c ON c.id = b.category_id
-     WHERE b.status = 'approved' ${conditions.join(' ')}
-     ORDER BY lower(b.name), b.id`,
-    params,
+     ${from} ${where}
+     ORDER BY lower(b.name), b.id
+     LIMIT ${PAGE_SIZE} OFFSET $${params.length + 1}`,
+    [...params, (paging.page - 1) * PAGE_SIZE],
   );
-  res.json({ businesses: rows });
+  res.json({ businesses: rows, ...pageDetails(paging.page, count.rows[0].total) });
 });
 
 // REQ-3.3 create a business listing. It starts as pending and belongs to the member who submitted it;

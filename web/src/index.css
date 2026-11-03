@@ -353,6 +353,41 @@ main:focus {
   outline-offset: 2px;
 }
 
+/* Page navigation under a list: Previous, the page numbers, Next */
+.pagination {
+  margin: var(--space-4) 0;
+}
+
+.pagination__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pagination__gap {
+  padding: 0 var(--space-1);
+}
+
+.pagination .chip {
+  min-width: 44px;
+}
+
+.pagination .chip[aria-current='page'] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 600;
+}
+
+.pagination .chip[aria-disabled='true'] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* The search box and its button side by side, wrapping on narrow screens */
 .search-form__row {
   display: flex;

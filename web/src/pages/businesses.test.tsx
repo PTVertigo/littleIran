@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { mockFetch, renderApp } from '../test/render';
+import { businessPage, mockFetch, renderApp } from '../test/render';
 
 const signedOut = { status: 401, body: { error: 'Please log in to continue.' } };
 const signedIn = {
@@ -36,7 +36,7 @@ const filterCategories = {
 // REQ-3.3.1
 describe('Business directory page', () => {
   it('lists each business with its name, category, city and description', async () => {
-    const fetchMock = mockFetch(signedOut, filterCategories, { status: 200, body: { businesses } });
+    const fetchMock = mockFetch(signedOut, filterCategories, { status: 200, body: businessPage(businesses) });
     renderApp('/businesses');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Business directory' })).toBeInTheDocument();
@@ -54,19 +54,19 @@ describe('Business directory page', () => {
   });
 
   it('shows how many businesses there are, in the right grammar', async () => {
-    mockFetch(signedOut, filterCategories, { status: 200, body: { businesses } });
+    mockFetch(signedOut, filterCategories, { status: 200, body: businessPage(businesses) });
     renderApp('/businesses');
     expect(await screen.findByText('2 businesses')).toBeInTheDocument();
   });
 
   it('says "1 business" for a single listing', async () => {
-    mockFetch(signedOut, filterCategories, { status: 200, body: { businesses: [businesses[0]] } });
+    mockFetch(signedOut, filterCategories, { status: 200, body: businessPage([businesses[0]]) });
     renderApp('/businesses');
     expect(await screen.findByText('1 business')).toBeInTheDocument();
   });
 
   it('is open to a visitor who is not logged in', async () => {
-    mockFetch(signedOut, filterCategories, { status: 200, body: { businesses } });
+    mockFetch(signedOut, filterCategories, { status: 200, body: businessPage(businesses) });
     const router = renderApp('/businesses');
 
     await screen.findAllByRole('article');
@@ -74,7 +74,7 @@ describe('Business directory page', () => {
   });
 
   it('is open to a logged-in member too', async () => {
-    mockFetch(signedIn, filterCategories, { status: 200, body: { businesses } });
+    mockFetch(signedIn, filterCategories, { status: 200, body: businessPage(businesses) });
     renderApp('/businesses');
 
     expect(await screen.findAllByRole('article')).toHaveLength(2);
@@ -93,13 +93,13 @@ describe('Business directory page', () => {
     expect(await screen.findByText('Loading businesses')).toBeInTheDocument();
     expect(screen.queryByRole('article')).not.toBeInTheDocument();
 
-    finish({ ok: true, status: 200, json: async () => ({ businesses }) });
+    finish({ ok: true, status: 200, json: async () => businessPage(businesses) });
     expect(await screen.findAllByRole('article')).toHaveLength(2);
     expect(screen.queryByText('Loading businesses')).not.toBeInTheDocument();
   });
 
   it('says so plainly when there are no businesses yet', async () => {
-    mockFetch(signedOut, filterCategories, { status: 200, body: { businesses: [] } });
+    mockFetch(signedOut, filterCategories, { status: 200, body: businessPage([]) });
     renderApp('/businesses');
 
     expect(await screen.findByText('No businesses have been listed yet.')).toBeInTheDocument();
@@ -118,7 +118,7 @@ describe('Business directory page', () => {
   // REQ-4.1.3
   it('shows a name containing markup as plain text', async () => {
     const hostile = [{ ...businesses[0], name: '<script>alert(1)</script>', description: '<img src=x onerror=alert(1)>' }];
-    mockFetch(signedOut, filterCategories, { status: 200, body: { businesses: hostile } });
+    mockFetch(signedOut, filterCategories, { status: 200, body: businessPage(hostile) });
     renderApp('/businesses');
 
     await screen.findByRole('heading', { level: 2, name: '<script>alert(1)</script>' });
@@ -128,7 +128,7 @@ describe('Business directory page', () => {
 
   // REQ-4.4.2 one click from the home page, and from the navigation on every page
   it('is one click away from the home page button', async () => {
-    mockFetch(signedOut, filterCategories, { status: 200, body: { businesses } });
+    mockFetch(signedOut, filterCategories, { status: 200, body: businessPage(businesses) });
     renderApp('/');
 
     await userEvent.click(await screen.findByRole('link', { name: 'Browse businesses' }));
@@ -137,7 +137,7 @@ describe('Business directory page', () => {
   });
 
   it('is one click away from the navigation, whether or not you are logged in', async () => {
-    mockFetch(signedIn, filterCategories, { status: 200, body: { businesses } });
+    mockFetch(signedIn, filterCategories, { status: 200, body: businessPage(businesses) });
     renderApp('/dashboard');
     await screen.findByRole('heading', { name: /Welcome/ });
 

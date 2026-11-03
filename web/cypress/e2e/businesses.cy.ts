@@ -21,7 +21,7 @@ describe('Business directory', () => {
   });
 
   it('shows a count that matches the cards', () => {
-    cy.visit('/businesses');
+    cy.visit('/businesses?category=Retail');
 
     cy.get('article').its('length').then((count) => {
       cy.contains('p', `${count} businesses`);

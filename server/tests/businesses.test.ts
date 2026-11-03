@@ -45,6 +45,116 @@ afterAll(async () => {
   await pool.end();
 });
 
+// REQ-3.7.7 pagination: 10 businesses a page
+describe('GET /api/businesses?page=', () => {
+  const page = (value: string | number, extra: object = {}) => request(app).get('/api/businesses').query({ page: value, ...extra });
+  const names = (res: request.Response) => res.body.businesses.map((b: { name: string }) => b.name);
+
+  // Cafe 01 ... Cafe 25, so the order by name is the order they were added
+  async function addCafes(count: number, overrides: Record<string, unknown> = {}) {
+    for (let i = 1; i <= count; i++) await addBusiness({ name: `Cafe ${String(i).padStart(2, '0')}`, ...overrides });
+  }
+
+  it('shows at most 10 businesses on the first page, when no page is asked for', async () => {
+    await addCafes(25);
+
+    const res = await list();
+
+    expect(res.status).toBe(200);
+    expect(res.body.businesses).toHaveLength(10);
+    expect(names(res)[0]).toBe('Cafe 01');
+    expect(names(res)[9]).toBe('Cafe 10');
+    expect(res.body).toMatchObject({ page: 1, pageSize: 10, total: 25, totalPages: 3 });
+  });
+
+  it('shows the next 10 on page 2 and the rest on page 3, with nothing repeated or missed', async () => {
+    await addCafes(25);
+
+    const [one, two, three] = [await page(1), await page(2), await page(3)];
+
+    expect(names(two)).toEqual(Array.from({ length: 10 }, (_, i) => `Cafe ${i + 11}`));
+    expect(names(three)).toEqual(Array.from({ length: 5 }, (_, i) => `Cafe ${i + 21}`));
+    expect([...names(one), ...names(two), ...names(three)]).toEqual(Array.from({ length: 25 }, (_, i) => `Cafe ${String(i + 1).padStart(2, '0')}`));
+    expect(two.body).toMatchObject({ page: 2, total: 25, totalPages: 3 });
+  });
+
+  it('fills a page exactly when there are 10, and 11 spill onto a second page', async () => {
+    await addCafes(10);
+    expect((await page(1)).body).toMatchObject({ total: 10, totalPages: 1 });
+    expect((await page(1)).body.businesses).toHaveLength(10);
+
+    await addBusiness({ name: 'Cafe 11' });
+    const second = await page(2);
+    expect(second.body).toMatchObject({ total: 11, totalPages: 2 });
+    expect(names(second)).toEqual(['Cafe 11']);
+  });
+
+  it('answers a page past the end with an empty list, and still says how many there are', async () => {
+    await addCafes(12);
+
+    const res = await page(5);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ businesses: [], page: 5, pageSize: 10, total: 12, totalPages: 2 });
+  });
+
+  it('counts only approved businesses', async () => {
+    await addCafes(11);
+    await addBusiness({ name: 'Hidden', status: 'pending' });
+    await addBusiness({ name: 'Rejected', status: 'rejected', rejection_reason: 'Not a business' });
+
+    expect((await list()).body).toMatchObject({ total: 11, totalPages: 2 });
+    expect(names(await page(2))).toEqual(['Cafe 11']);
+  });
+
+  it('pages through the search and category results, counting only the matches', async () => {
+    await addCafes(13);
+    await addCafes(4, { city: 'Oakville' }); // duplicates of the names above, in another city
+    await addBusiness({ name: 'Cafe Rugs' }, 'Retail');
+
+    const search = await page(2, { search: 'cafe' });
+    expect(search.body).toMatchObject({ total: 18, totalPages: 2 });
+    expect(search.body.businesses).toHaveLength(8);
+
+    const retail = await page(1, { category: 'Retail' });
+    expect(retail.body).toMatchObject({ total: 1, totalPages: 1 });
+    expect(names(retail)).toEqual(['Cafe Rugs']);
+
+    const both = await page(2, { search: 'cafe', category: 'Restaurant' });
+    expect(both.body).toMatchObject({ total: 17, totalPages: 2 });
+    expect(both.body.businesses).toHaveLength(7);
+  });
+
+  it('keeps the order stable when names repeat, so no business shows on two pages', async () => {
+    for (let i = 0; i < 15; i++) await addBusiness({ name: 'Same Name' });
+
+    const ids = [...(await page(1)).body.businesses, ...(await page(2)).body.businesses].map((b: { id: string }) => b.id);
+
+    expect(new Set(ids).size).toBe(15);
+  });
+
+  it('says page 1 of 1 when there are no businesses at all', async () => {
+    expect((await list()).body).toMatchObject({ page: 1, total: 0, totalPages: 1 });
+  });
+
+  it.each(['0', '-1', '1.5', 'abc', '', ' 2', '2 ', '1e2', '01', '+1', '1000000', '99999999999999999999', '1 OR 1=1', "1'; DROP TABLE businesses;--", '%00'])(
+    'refuses the page %p with 400 and changes nothing',
+    async (value) => {
+      await addBusiness();
+
+      const res = await page(value);
+
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({ error: 'Choose a page number from 1 upward.' });
+      expect((await pool.query('SELECT count(*)::int AS n FROM businesses')).rows[0].n).toBe(1);
+    },
+  );
+
+  it('refuses two pages in one request', async () => {
+    expect((await request(app).get('/api/businesses?page=1&page=2')).status).toBe(400);
+  });
+});
+
 // REQ-3.3.1
 describe('GET /api/businesses', () => {
   it('lists an approved business with its name, category, city and description', async () => {
@@ -55,6 +165,10 @@ describe('GET /api/businesses', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       businesses: [{ id, name: 'Norouz Restaurant', category: 'Restaurant', city: 'Toronto', description: 'Kebabs and stews.' }],
+      page: 1,
+      pageSize: 10,
+      total: 1,
+      totalPages: 1,
     });
   });
 
@@ -62,7 +176,7 @@ describe('GET /api/businesses', () => {
     const res = await list();
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ businesses: [] });
+    expect(res.body).toEqual({ businesses: [], page: 1, pageSize: 10, total: 0, totalPages: 1 });
   });
 
   it('leaves out businesses that are pending or rejected', async () => {
@@ -176,7 +290,7 @@ describe('GET /api/businesses?search=', () => {
     const res = await search('zzzzzz');
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ businesses: [] });
+    expect(res.body).toEqual({ businesses: [], page: 1, pageSize: 10, total: 0, totalPages: 1 });
   });
 
   it('lists everything for an empty or blank search', async () => {
@@ -245,7 +359,7 @@ describe('GET /api/businesses?search=', () => {
     const res = await search(attempt);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ businesses: [] });
+    expect(res.body).toEqual({ businesses: [], page: 1, pageSize: 10, total: 0, totalPages: 1 });
     expect(Date.now() - started).toBeLessThan(4000);
     expect((await pool.query('SELECT count(*)::int AS n FROM businesses')).rows[0].n).toBe(4);
   });
@@ -344,7 +458,7 @@ describe('GET /api/businesses?category=', () => {
       const res = await filter(category);
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ businesses: [] });
+      expect(res.body).toEqual({ businesses: [], page: 1, pageSize: 10, total: 0, totalPages: 1 });
     }
   });
 
@@ -380,7 +494,7 @@ describe('GET /api/businesses?category=', () => {
     const res = await filter(attempt);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ businesses: [] });
+    expect(res.body).toEqual({ businesses: [], page: 1, pageSize: 10, total: 0, totalPages: 1 });
     expect(Date.now() - started).toBeLessThan(4000);
     expect((await pool.query('SELECT count(*)::int AS n FROM businesses')).rows[0].n).toBe(4);
   });

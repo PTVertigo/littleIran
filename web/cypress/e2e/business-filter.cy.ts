@@ -1,6 +1,6 @@
 // Needs the API and web app running (npm run dev) and the sample businesses from `cd server && npm run seed:listings`.
 // The sample data has 6 Restaurant, 4 Retail, 2 Professional Services and 1 each of Services, Entertainment
-// and Health & Wellness businesses, 15 in all.
+// and Health & Wellness businesses, 15 in all (the directory shows 10 to a page, so All has 2 pages).
 
 const chip = (name: string) => cy.contains('.filter .chip', new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`));
 const searchBox = () => cy.get('input[type="search"]');
@@ -17,7 +17,7 @@ describe('Business category filter', () => {
       ]);
     });
     chip('All').should('have.attr', 'aria-pressed', 'true');
-    cy.get('article').should('have.length', 15);
+    cy.get('article').should('have.length', 10);
   });
 
   it('shows only the businesses in the category that was chosen', () => {
@@ -47,7 +47,7 @@ describe('Business category filter', () => {
     cy.contains('article h2', 'Alborz Accounting');
     chip('All').click();
 
-    cy.get('article').should('have.length', 15);
+    cy.get('article').should('have.length', 10);
     cy.location('search').should('eq', '');
   });
 
@@ -88,7 +88,7 @@ describe('Business category filter', () => {
 
     cy.contains('button', 'Show all categories').click();
 
-    cy.get('article').should('have.length', 15);
+    cy.get('article').should('have.length', 10);
     chip('All').should('have.attr', 'aria-pressed', 'true');
   });
 
@@ -110,12 +110,12 @@ describe('Business category filter', () => {
     cy.contains('[role="status"]', 'No businesses in');
     cy.get('article').should('not.exist');
     cy.contains('button', 'Show all categories').click();
-    cy.get('article').should('have.length', 15);
+    cy.get('article').should('have.length', 10);
   });
 
   it('works from the keyboard', () => {
     cy.visit('/businesses');
-    cy.get('article').should('have.length', 15);
+    cy.get('article').should('have.length', 10);
 
     chip('Retail').focus().type('{enter}');
 
