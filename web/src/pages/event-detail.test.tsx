@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { mockFetch, renderApp } from '../test/render';
+import { eventPage, mockFetch, renderApp } from '../test/render';
 
 const signedOut = { status: 401, body: { error: 'Please log in to continue.' } };
 const event = {
@@ -157,10 +157,10 @@ describe('Event detail page', () => {
     mockFetch(
       signedOut,
       { status: 200, body: { categories: [{ id: '1', name: 'Festival' }] } },
-      { status: 200, body: { events: [summary] } },
+      { status: 200, body: eventPage([summary]) },
       found(),
       { status: 200, body: { categories: [{ id: '1', name: 'Festival' }] } },
-      { status: 200, body: { events: [summary] } },
+      { status: 200, body: eventPage([summary]) },
     );
     renderApp('/events');
 

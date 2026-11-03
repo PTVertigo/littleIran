@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { validateEvent } from '../event-validation';
 import { pool } from '../db';
 import { requireAuth } from '../middleware/auth';
+import { PAGE_SIZE, pageDetails, parsePage } from '../pagination';
 import { escapeLike, parseCategoryFilter, parseSearch } from '../search';
 import { isRecordId } from '../validation';
 
@@ -12,6 +13,7 @@ export const eventsRouter = Router();
 // Pending and rejected events never appear.
 // REQ-3.7.2 ?search=... narrows it to events whose name or category contains every word typed.
 // REQ-3.7.5 ?category=... narrows it to one category, by name. Both can be combined.
+// REQ-3.7.8 ?page=... picks one page of 10; the answer also says how many events there are in all.
 eventsRouter.get('/', async (req, res) => {
   const search = parseSearch(req.query.search);
   if ('error' in search) {
@@ -25,6 +27,12 @@ eventsRouter.get('/', async (req, res) => {
     return;
   }
 
+  const paging = parsePage(req.query.page);
+  if ('error' in paging) {
+    res.status(400).json({ error: paging.error });
+    return;
+  }
+
   // One condition per word, built only from parameter numbers. The words themselves are parameters.
   const params: string[] = search.terms.map((term) => `%${escapeLike(term)}%`);
   const conditions = params.map((_, i) => `AND (e.title ILIKE $${i + 1} OR c.name ILIKE $${i + 1})`);
@@ -33,18 +41,22 @@ eventsRouter.get('/', async (req, res) => {
     conditions.push(`AND lower(c.name) = lower($${params.length})`);
   }
 
+  const where = `WHERE e.status = 'approved' ${conditions.join(' ')}`;
+  const from = 'FROM events e JOIN categories c ON c.id = e.category_id';
+  const count = await pool.query<{ total: number }>(`SELECT count(*)::int AS total ${from} ${where}`, params);
+
   const { rows } = await pool.query(
     `SELECT e.id, e.title, c.name AS category, e.starts_at AS "startsAt", e.location, e.description,
             coalesce(e.ends_at, e.starts_at) < now() AS past
-     FROM events e JOIN categories c ON c.id = e.category_id
-     WHERE e.status = 'approved' ${conditions.join(' ')}
+     ${from} ${where}
      ORDER BY past,
               CASE WHEN NOT coalesce(e.ends_at, e.starts_at) < now() THEN e.starts_at END ASC,
               e.starts_at DESC,
-              e.id`,
-    params,
+              e.id
+     LIMIT ${PAGE_SIZE} OFFSET $${params.length + 1}`,
+    [...params, (paging.page - 1) * PAGE_SIZE],
   );
-  res.json({ events: rows });
+  res.json({ events: rows, ...pageDetails(paging.page, count.rows[0].total) });
 });
 
 // REQ-3.4 create an event. It starts as pending and belongs to the member who submitted it; it only

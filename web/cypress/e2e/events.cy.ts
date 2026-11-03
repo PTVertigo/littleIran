@@ -6,8 +6,9 @@ describe('Browse events', () => {
     cy.visit('/events');
 
     cy.contains('h1', 'Cultural events');
-    cy.get('article').should('have.length', 14);
-    cy.contains('[role="status"]', '14 events');
+    // 10 to a page (REQ-3.7.8), so the first page of the 14 events
+    cy.get('article').should('have.length', 10);
+    cy.contains('[role="status"]', 'Showing 1–10 of 14 events');
   });
 
   it('shows the title, category, date and time, location and description of each event', () => {
@@ -23,25 +24,31 @@ describe('Browse events', () => {
   });
 
   it('puts the events still to come first, soonest first, and the finished ones last', () => {
-    cy.visit('/events');
+    const starts: number[] = [];
+    const collect = () =>
+      cy.get('article time').each(($t) => {
+        starts.push(new Date($t.attr('datetime') as string).getTime());
+      });
 
-    cy.get('article time').then(($times) => {
-      const starts = [...$times].map((t) => new Date(t.getAttribute('datetime') as string).getTime());
+    cy.visit('/events');
+    collect();
+    cy.get('nav[aria-label="Event pages"]').contains('button', 'Next').click();
+    cy.contains('[role="status"]', 'Page 2 of 2');
+    collect().then(() => {
+      expect(starts).to.have.length(14);
       const upcoming = starts.slice(0, 12);
       expect(upcoming).to.deep.equal([...upcoming].sort((a, b) => a - b));
       expect(upcoming[0]).to.be.greaterThan(Date.now());
       expect(starts[12]).to.be.lessThan(Date.now());
       expect(starts[12]).to.be.greaterThan(starts[13]);
     });
-    cy.get('article').eq(12).should('contain', 'Past event');
-    cy.get('article').eq(0).should('not.contain', 'Past event');
+    cy.get('article').eq(2).should('contain', 'Past event');
+    cy.get('article').eq(1).should('not.contain', 'Past event');
   });
 
-  it('shows events from every category', () => {
-    cy.visit('/events');
-
+  it('has events in every category', () => {
     ['Festival', 'Workshop', 'Celebration', 'Educational', 'Social Gathering', 'Cultural Events'].forEach((name) => {
-      cy.contains('article .card__meta', name);
+      cy.request(`/api/events?category=${encodeURIComponent(name)}`).its('body.total').should('be.greaterThan', 0);
     });
   });
 
@@ -59,7 +66,8 @@ describe('Browse events', () => {
   it('only lists approved events in the API, with no contact details', () => {
     cy.request('/api/events').then((res) => {
       expect(res.status).to.equal(200);
-      expect(res.body.events).to.have.length(14);
+      expect(res.body.total).to.equal(14);
+      expect(res.body.events).to.have.length(10);
       res.body.events.forEach((event: object) => {
         expect(Object.keys(event).sort()).to.deep.equal(['category', 'description', 'id', 'location', 'past', 'startsAt', 'title']);
       });

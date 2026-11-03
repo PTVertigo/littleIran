@@ -1,7 +1,7 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { mockFetch, renderApp } from '../test/render';
+import { eventPage, mockFetch, renderApp } from '../test/render';
 
 const signedOut = { status: 401, body: { error: 'Please log in to continue.' } };
 const signedIn = {
@@ -232,7 +232,7 @@ describe('Add an event page', () => {
   });
 
   it("is reached from the events page's \"Add an event\" button", async () => {
-    mockFetch(signedIn, categories, { status: 200, body: { events: [] } }, categories);
+    mockFetch(signedIn, categories, { status: 200, body: eventPage([]) }, categories);
     renderApp('/events');
 
     await userEvent.click(await screen.findByRole('link', { name: 'Add an event' }));

@@ -58,7 +58,7 @@ describe('GET /api/events', () => {
     const res = await list();
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ events: [] });
+    expect(res.body).toEqual({ events: [], page: 1, pageSize: 10, total: 0, totalPages: 1 });
   });
 
   it('is open to a visitor who is not logged in', async () => {
@@ -275,7 +275,7 @@ describe('GET /api/events?search=', () => {
     const res = await search('zzzzzz');
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ events: [] });
+    expect(res.body).toEqual({ events: [], page: 1, pageSize: 10, total: 0, totalPages: 1 });
   });
 
   it('lists everything for an empty or blank search', async () => {
@@ -347,7 +347,7 @@ describe('GET /api/events?search=', () => {
     const res = await search(attempt);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ events: [] });
+    expect(res.body).toEqual({ events: [], page: 1, pageSize: 10, total: 0, totalPages: 1 });
     expect(Date.now() - started).toBeLessThan(4000);
     expect((await pool.query('SELECT count(*)::int AS n FROM events')).rows[0].n).toBe(4);
   });
@@ -436,12 +436,12 @@ describe('GET /api/events?category=', () => {
     for (const category of ['Grocery', 'Restaurant', 'Retail']) {
       const res = await filter(category);
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ events: [] });
+      expect(res.body).toEqual({ events: [], page: 1, pageSize: 10, total: 0, totalPages: 1 });
     }
   });
 
   it('answers with an empty list for an event category that has no events yet', async () => {
-    expect((await filter('Educational')).body).toEqual({ events: [] });
+    expect((await filter('Educational')).body).toEqual({ events: [], page: 1, pageSize: 10, total: 0, totalPages: 1 });
   });
 
   it('never returns a pending or rejected event, even in the category', async () => {
@@ -466,7 +466,7 @@ describe('GET /api/events?category=', () => {
     const res = await filter(attempt);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ events: [] });
+    expect(res.body).toEqual({ events: [], page: 1, pageSize: 10, total: 0, totalPages: 1 });
     expect(Date.now() - started).toBeLessThan(4000);
     expect((await pool.query('SELECT count(*)::int AS n FROM events')).rows[0].n).toBe(5);
   });
@@ -497,6 +497,128 @@ describe('GET /api/events?category=', () => {
 
   it('is open to a visitor who is not logged in', async () => {
     expect((await filter('Workshop')).status).toBe(200);
+  });
+});
+
+// REQ-3.7.8 pagination: 10 events a page
+describe('GET /api/events?page=', () => {
+  const page = (value: string | number, extra: object = {}) => request(app).get('/api/events').query({ page: value, ...extra });
+  const label = (i: number) => `Event ${String(i).padStart(2, '0')}`;
+
+  // Event 01 ... Event N, each starting a day after the one before, so the order is the order they were added
+  async function addUpcoming(count: number, category = 'Festival') {
+    for (let i = 1; i <= count; i++) await addEvent({ title: label(i), starts_at: inDays(i) }, category);
+  }
+
+  it('shows at most 10 events on the first page, when no page is asked for', async () => {
+    await addUpcoming(25);
+
+    const res = await list();
+
+    expect(res.status).toBe(200);
+    expect(res.body.events).toHaveLength(10);
+    expect(titles(res)[0]).toBe('Event 01');
+    expect(titles(res)[9]).toBe('Event 10');
+    expect(res.body).toMatchObject({ page: 1, pageSize: 10, total: 25, totalPages: 3 });
+  });
+
+  it('shows the next 10 on page 2 and the rest on page 3, with nothing repeated or missed', async () => {
+    await addUpcoming(25);
+
+    const [one, two, three] = [await page(1), await page(2), await page(3)];
+
+    expect(titles(two)).toEqual(Array.from({ length: 10 }, (_, i) => label(i + 11)));
+    expect(titles(three)).toEqual(Array.from({ length: 5 }, (_, i) => label(i + 21)));
+    expect([...titles(one), ...titles(two), ...titles(three)]).toEqual(Array.from({ length: 25 }, (_, i) => label(i + 1)));
+    expect(two.body).toMatchObject({ page: 2, total: 25, totalPages: 3 });
+  });
+
+  it('fills a page exactly when there are 10, and 11 spill onto a second page', async () => {
+    await addUpcoming(10);
+    expect((await page(1)).body).toMatchObject({ total: 10, totalPages: 1 });
+    expect((await page(1)).body.events).toHaveLength(10);
+
+    await addEvent({ title: 'Event 11', starts_at: inDays(11) });
+    const second = await page(2);
+    expect(second.body).toMatchObject({ total: 11, totalPages: 2 });
+    expect(titles(second)).toEqual(['Event 11']);
+  });
+
+  it('keeps the upcoming events before the finished ones across the pages', async () => {
+    await addUpcoming(12);
+    await addEvent({ title: 'Old A', starts_at: inDays(-5) });
+    await addEvent({ title: 'Old B', starts_at: inDays(-9) });
+
+    const second = await page(2);
+
+    expect(titles(second)).toEqual(['Event 11', 'Event 12', 'Old A', 'Old B']);
+    expect(second.body.events.map((e: { past: boolean }) => e.past)).toEqual([false, false, true, true]);
+  });
+
+  it('answers a page past the end with an empty list, and still says how many there are', async () => {
+    await addUpcoming(12);
+
+    const res = await page(5);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ events: [], page: 5, pageSize: 10, total: 12, totalPages: 2 });
+  });
+
+  it('counts only approved events', async () => {
+    await addUpcoming(11);
+    await addEvent({ title: 'Hidden', status: 'pending' });
+    await addEvent({ title: 'Rejected', status: 'rejected', rejection_reason: 'No venue' });
+
+    expect((await list()).body).toMatchObject({ total: 11, totalPages: 2 });
+    expect(titles(await page(2))).toEqual(['Event 11']);
+  });
+
+  it('pages through the search and category results, counting only the matches', async () => {
+    await addUpcoming(13, 'Workshop');
+    await addUpcoming(4, 'Festival');
+    await addEvent({ title: 'Event Film', starts_at: inDays(40) }, 'Cultural Events');
+
+    const search = await page(2, { search: 'event' });
+    expect(search.body).toMatchObject({ total: 18, totalPages: 2 });
+    expect(search.body.events).toHaveLength(8);
+
+    const cultural = await page(1, { category: 'Cultural Events' });
+    expect(cultural.body).toMatchObject({ total: 1, totalPages: 1 });
+    expect(titles(cultural)).toEqual(['Event Film']);
+
+    const both = await page(2, { search: 'event', category: 'Workshop' });
+    expect(both.body).toMatchObject({ total: 13, totalPages: 2 });
+    expect(both.body.events).toHaveLength(3);
+  });
+
+  it('keeps the order stable when events start at the same moment, so none shows on two pages', async () => {
+    const startsAt = inDays(4);
+    for (let i = 0; i < 15; i++) await addEvent({ title: 'Same Time', starts_at: startsAt });
+
+    const ids = [...(await page(1)).body.events, ...(await page(2)).body.events].map((e: { id: string }) => e.id);
+
+    expect(new Set(ids).size).toBe(15);
+  });
+
+  it('says page 1 of 1 when there are no events at all', async () => {
+    expect((await list()).body).toMatchObject({ page: 1, total: 0, totalPages: 1 });
+  });
+
+  it.each(['0', '-1', '1.5', 'abc', '', ' 2', '2 ', '1e2', '01', '+1', '1000000', '99999999999999999999', '1 OR 1=1', "1'; DROP TABLE events;--", '%00'])(
+    'refuses the page %p with 400 and changes nothing',
+    async (value) => {
+      await addEvent();
+
+      const res = await page(value);
+
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({ error: 'Choose a page number from 1 upward.' });
+      expect((await pool.query('SELECT count(*)::int AS n FROM events')).rows[0].n).toBe(1);
+    },
+  );
+
+  it('refuses two pages in one request', async () => {
+    expect((await request(app).get('/api/events?page=1&page=2')).status).toBe(400);
   });
 });
 

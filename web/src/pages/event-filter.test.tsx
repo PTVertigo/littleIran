@@ -1,7 +1,7 @@
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { mockFetch, renderApp } from '../test/render';
+import { eventPage, mockFetch, renderApp } from '../test/render';
 
 const signedOut = { status: 401, body: { error: 'Please log in to continue.' } };
 const base = { startsAt: '2026-12-12T16:00:00.000Z', location: 'Hamilton', past: false };
@@ -13,7 +13,7 @@ const categories = {
   status: 200,
   body: { categories: [{ id: '1', name: 'Festival' }, { id: '2', name: 'Workshop' }, { id: '3', name: 'Cultural Events' }] },
 };
-const list = (events = [norouz, calligraphy, film, music]) => ({ status: 200, body: { events } });
+const list = (events = [norouz, calligraphy, film, music]) => ({ status: 200, body: eventPage(events) });
 
 const filter = () => screen.getByRole('group', { name: 'Filter by category' });
 const chip = (name: string) => within(filter()).getByRole('button', { name });

@@ -31,3 +31,9 @@ export function businessPage(businesses: object[], paging: { page?: number; tota
   const total = paging.total ?? businesses.length;
   return { businesses, page: paging.page ?? 1, pageSize: 10, total, totalPages: paging.totalPages ?? Math.max(1, Math.ceil(total / 10)) };
 }
+
+// The body of GET /api/events: one page of events, with the paging details the server adds
+export function eventPage(events: object[], paging: { page?: number; total?: number; totalPages?: number } = {}) {
+  const total = paging.total ?? events.length;
+  return { events, page: paging.page ?? 1, pageSize: 10, total, totalPages: paging.totalPages ?? Math.max(1, Math.ceil(total / 10)) };
+}

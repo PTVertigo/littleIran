@@ -1,5 +1,5 @@
 // REQ-3.7.5 / FE-004 Needs the API and web app running (npm run dev) and the sample data from
-// `cd server && npm run seed:listings`: 14 approved events, which are 3 Festival, 2 Workshop, 2 Celebration,
+// `cd server && npm run seed:listings`: 14 approved events (the page shows 10 at a time), which are 3 Festival, 2 Workshop, 2 Celebration,
 // 2 Educational, 2 Social Gathering and 3 Cultural Events.
 
 const chip = (name: string) => cy.contains('.filter .chip', new RegExp(`^${name}$`));
@@ -15,7 +15,7 @@ describe('Event category filter', () => {
       ]);
     });
     chip('All').should('have.attr', 'aria-pressed', 'true');
-    cy.get('article').should('have.length', 14);
+    cy.get('article').should('have.length', 10);
   });
 
   // FE-004
@@ -46,7 +46,7 @@ describe('Event category filter', () => {
     cy.contains('article h2', 'Introduction to the Farsi Language');
     chip('All').click();
 
-    cy.get('article').should('have.length', 14);
+    cy.get('article').should('have.length', 10);
     cy.location('search').should('eq', '');
   });
 
@@ -95,7 +95,7 @@ describe('Event category filter', () => {
     cy.contains('[role="status"]', 'No events in Grocery yet.');
     cy.get('article').should('not.exist');
     cy.contains('button', 'Show all categories').click();
-    cy.get('article').should('have.length', 14);
+    cy.get('article').should('have.length', 10);
   });
 
   it('keeps the filter when you open an event and come back', () => {
@@ -116,12 +116,12 @@ describe('Event category filter', () => {
     cy.contains('[role="status"]', 'No events in');
     cy.get('article').should('not.exist');
     cy.contains('button', 'Show all categories').click();
-    cy.get('article').should('have.length', 14);
+    cy.get('article').should('have.length', 10);
   });
 
   it('works from the keyboard, and keeps the focus on the button', () => {
     cy.visit('/events');
-    cy.get('article').should('have.length', 14);
+    cy.get('article').should('have.length', 10);
 
     chip('Workshop').focus().type('{enter}');
 

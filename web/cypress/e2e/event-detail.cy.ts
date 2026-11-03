@@ -31,7 +31,7 @@ describe('Event detail', () => {
     cy.contains('a', 'Back to the events').click();
 
     cy.location('pathname').should('eq', '/events');
-    cy.get('article').should('have.length', 14);
+    cy.get('article').should('have.length', 10);
   });
 
   it('is open to a visitor who is not logged in', () => {
@@ -51,6 +51,6 @@ describe('Event detail', () => {
 
   it('answers 404 for an id that is not a number, and changes nothing', () => {
     cy.request({ url: "/api/events/1'%20OR%20'1'='1", failOnStatusCode: false }).its('status').should('eq', 404);
-    cy.request('/api/events').its('body.events').should('have.length', 14);
+    cy.request('/api/events').its('body.total').should('eq', 14);
   });
 });

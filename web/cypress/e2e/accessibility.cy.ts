@@ -101,6 +101,13 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     expectNoViolations();
   });
 
+  it('second page of the events has no violations', () => {
+    cy.visit('/events?page=2');
+    cy.get('nav[aria-label="Event pages"] [aria-current="page"]').should('have.text', '2');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
   it('events filtered by a category have no violations', () => {
     cy.visit('/events?category=Cultural%20Events');
     // Wait for the buttons and the results, so the pressed button's colours are what gets scanned
@@ -245,6 +252,13 @@ describe('Accessibility in dark mode', () => {
   it('second page of the business directory has no violations', () => {
     cy.visit('/businesses?page=2');
     cy.get('nav[aria-label="Business pages"] [aria-current="page"]').should('have.text', '2');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
+  it('second page of the events has no violations', () => {
+    cy.visit('/events?page=2');
+    cy.get('nav[aria-label="Event pages"] [aria-current="page"]').should('have.text', '2');
     cy.get('article').should('have.length.at.least', 1);
     expectNoViolations();
   });

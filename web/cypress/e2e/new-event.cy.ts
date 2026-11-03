@@ -97,7 +97,7 @@ describe('Add an event', () => {
     cy.contains('h1', 'Event submitted');
 
     cy.contains('a', 'Back to the events').click();
-    cy.get('article').should('have.length', 14);
+    cy.get('article').should('have.length', 10);
     cy.contains('article h2', title).should('not.exist');
 
     cy.get('nav[aria-label="Main"]').contains('a', 'Profile').click();

@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { mockFetch, renderApp } from '../test/render';
+import { eventPage, mockFetch, renderApp } from '../test/render';
 
 const signedOut = { status: 401, body: { error: 'Please log in to continue.' } };
 const norouz = {
@@ -19,7 +19,7 @@ const filterCategories = {
   status: 200,
   body: { categories: [{ id: '1', name: 'Festival' }, { id: '2', name: 'Workshop' }, { id: '3', name: 'Cultural Events' }] },
 };
-const found = (events: object[]) => ({ status: 200, body: { events } });
+const found = (events: object[]) => ({ status: 200, body: eventPage(events) });
 
 // REQ-3.4.1
 describe('Events page', () => {
@@ -98,7 +98,7 @@ describe('Events page', () => {
 
     expect(await screen.findByText('Loading events')).toBeInTheDocument();
 
-    finish({ ok: true, status: 200, json: async () => ({ events: [norouz] }) });
+    finish({ ok: true, status: 200, json: async () => eventPage([norouz]) });
     expect(await screen.findByRole('article')).toBeInTheDocument();
     expect(screen.queryByText('Loading events')).not.toBeInTheDocument();
   });

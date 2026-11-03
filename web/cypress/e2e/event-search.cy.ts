@@ -59,7 +59,7 @@ describe('Event search', () => {
 
     cy.contains('button', 'Clear search').click();
 
-    cy.get('article').should('have.length', 14);
+    cy.get('article').should('have.length', 10);
     searchBox().should('have.value', '');
     cy.location('search').should('eq', '');
   });
@@ -91,7 +91,7 @@ describe('Event search', () => {
     cy.get('article').should('not.exist');
 
     cy.contains('button', 'Clear search').click();
-    cy.get('article').should('have.length', 14);
+    cy.get('article').should('have.length', 10);
   });
 
   it('shows markup typed into the box as text only', () => {

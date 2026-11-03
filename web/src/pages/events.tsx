@@ -1,8 +1,9 @@
-import { useEffect, useId, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
 import { CategoryFilter } from '../components/category-filter';
 import { ErrorBanner } from '../components/error-banner';
+import { Pagination } from '../components/pagination';
 import { Spinner } from '../components/spinner';
 import { ApiError, apiRequest } from '../lib/api';
 import { formatDateTime } from '../lib/format';
@@ -17,16 +18,21 @@ type CulturalEvent = {
   past: boolean;
 };
 
+type Result = { events: CulturalEvent[]; page: number; pageSize: number; total: number; totalPages: number };
+
 const SEARCH_MAX_LENGTH = 100;
 
 // Screen 4 (cultural events). REQ-3.4.1 every approved event, open to everyone: events still to come
 // first, soonest first, then the ones that have finished. REQ-3.7.2 narrowed by words in the name or
-// category; REQ-3.7.5 narrowed to one category. Both live in the address (?search=...&category=...), so a
-// result can be shared and the back button returns to the previous one.
+// category; REQ-3.7.5 narrowed to one category; REQ-3.7.8 ten events a page, with page navigation. All three
+// live in the address (?search=...&category=...&page=...), so a result can be shared and the back button
+// returns to the previous one.
 export function EventsPage() {
   const [params, setParams] = useSearchParams();
   const search = (params.get('search') ?? '').trim();
   const category = (params.get('category') ?? '').trim();
+  const rawPage = params.get('page') ?? '';
+  const page = /^[1-9]\d{0,5}$/.test(rawPage) ? Number(rawPage) : 1;
   const [query, setQuery] = useState(search);
   const [shownSearch, setShownSearch] = useState(search);
   const inputId = useId();
@@ -38,9 +44,11 @@ export function EventsPage() {
     setQuery(search);
   }
 
-  // Changes the search or the category and leaves the other as it was; an empty value removes it
-  function update(change: { search?: string; category?: string }) {
+  // Changes the search, the category or the page and leaves the others as they were; an empty value removes
+  // it. A new search or category starts again from the first page.
+  function update(change: { search?: string; category?: string; page?: string }) {
     const next = new URLSearchParams(params);
+    if (!('page' in change)) next.delete('page');
     for (const [key, value] of Object.entries(change)) {
       if (value) next.set(key, value);
       else next.delete(key);
@@ -93,6 +101,8 @@ export function EventsPage() {
         key={`${search}|${category}`}
         search={search}
         category={category}
+        page={page}
+        onPageChange={(n) => update({ page: n > 1 ? String(n) : '' })}
         onClearSearch={() => update({ search: '' })}
         onClearCategory={() => update({ category: '' })}
       />
@@ -100,26 +110,53 @@ export function EventsPage() {
   );
 }
 
-type ListProps = { search: string; category: string; onClearSearch: () => void; onClearCategory: () => void };
+type ListProps = {
+  search: string;
+  category: string;
+  page: number;
+  onPageChange: (page: number) => void;
+  onClearSearch: () => void;
+  onClearCategory: () => void;
+};
 
-// Keyed by the search and the category, so each change starts from a clean state and shows its own loading indicator
-function EventList({ search, category, onClearSearch, onClearCategory }: ListProps) {
-  const [events, setEvents] = useState<CulturalEvent[] | null>(null);
+// Keyed by the search and the category, so each change starts from a clean state and shows its own loading
+// indicator. Moving to another page keeps the old page (and the page buttons) on screen until the new one arrives.
+function EventList({ search, category, page, onPageChange, onClearSearch, onClearCategory }: ListProps) {
+  const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState('');
+  const statusRef = useRef<HTMLParagraphElement>(null);
+  const movedPage = useRef(false);
 
   useEffect(() => {
     const filters = new URLSearchParams();
     if (search) filters.set('search', search);
     if (category) filters.set('category', category);
+    if (page > 1) filters.set('page', String(page));
     const query = filters.size > 0 ? `?${filters}` : '';
-    apiRequest<{ events: CulturalEvent[] }>(`/api/events${query}`)
-      .then((body) => setEvents(body.events))
+    apiRequest<Result>(`/api/events${query}`)
+      .then(setResult)
       .catch((err) => setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.'));
-  }, [search, category]);
+  }, [search, category, page]);
+
+  // After the buttons are used the new page has arrived somewhere above them, so keyboard focus goes to
+  // its heading line: a screen reader reads which page it is, and the next Tab is the first event
+  useEffect(() => {
+    if (result && movedPage.current) {
+      movedPage.current = false;
+      statusRef.current?.focus();
+    }
+  }, [result]);
 
   if (error) return <ErrorBanner message={error} />;
-  if (!events) return <Spinner label="Loading events" />;
-  if (events.length === 0) {
+  if (!result) return <Spinner label="Loading events" />;
+
+  const { events, total, totalPages } = result;
+  const changePage = (n: number) => {
+    movedPage.current = true;
+    onPageChange(n);
+  };
+
+  if (total === 0) {
     if (!search && !category) return <p>No events have been listed yet.</p>;
     return (
       <>
@@ -147,11 +184,38 @@ function EventList({ search, category, onClearSearch, onClearCategory }: ListPro
     );
   }
 
+  // A page number typed into the address that is past the last page
+  if (events.length === 0) {
+    return (
+      <>
+        <p role="status" tabIndex={-1} ref={statusRef}>
+          {`There is no page ${result.page}. The results have ${totalPages} ${totalPages === 1 ? 'page' : 'pages'}.`}
+        </p>
+        <p>
+          <button type="button" className="link-button" onClick={() => changePage(1)}>
+            Go to the first page
+          </button>
+        </p>
+      </>
+    );
+  }
+
+  const noun = total === 1 ? 'event' : 'events';
+  const filters = `${search ? ` found for “${search}”` : ''}${category ? ` in ${category}` : ''}`;
+  // A single page keeps the short count; several pages say which ones are shown
+  const first = (result.page - 1) * result.pageSize + 1;
+  const summary =
+    totalPages === 1
+      ? `${total} ${noun}${filters}`
+      : `Showing ${first}–${first + events.length - 1} of ${total} ${noun}${filters}. Page ${result.page} of ${totalPages}.`;
+
   return (
     <>
       {/* A status message, so a screen reader announces how many events there are */}
-      <p role="status">{`${events.length} ${events.length === 1 ? 'event' : 'events'}${search ? ` found for “${search}”` : ''}${category ? ` in ${category}` : ''}`}</p>
-      <ul className="card-grid">
+      <p role="status" tabIndex={-1} ref={statusRef}>
+        {summary}
+      </p>
+      <ul className="card-grid" aria-busy={result.page !== page}>
         {events.map((event) => (
           <li key={event.id}>
             <article className="card">
@@ -172,6 +236,7 @@ function EventList({ search, category, onClearSearch, onClearCategory }: ListPro
           </li>
         ))}
       </ul>
+      <Pagination page={page} totalPages={totalPages} label="Event pages" onChange={changePage} />
       {search && (
         <p>
           <button type="button" className="link-button" onClick={onClearSearch}>
