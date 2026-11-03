@@ -270,7 +270,7 @@ describe('Add a business page', () => {
   });
 
   it('is reached from the directory\'s "Add a business" button', async () => {
-    mockFetch(signedIn, { status: 200, body: { businesses: [] } }, categories);
+    mockFetch(signedIn, categories, { status: 200, body: { businesses: [] } }, categories);
     renderApp('/businesses');
 
     await userEvent.click(await screen.findByRole('link', { name: 'Add a business' }));

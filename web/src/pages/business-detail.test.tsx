@@ -168,6 +168,7 @@ describe('Business detail page', () => {
   it('is reached by clicking a business in the directory', async () => {
     mockFetch(
       signedOut,
+      { status: 200, body: { categories: [{ id: '1', name: 'Retail' }] } },
       { status: 200, body: { businesses: [{ id: '8', name: 'Pars Rug Gallery', category: 'Retail', city: 'Oakville', description: 'Rugs.' }] } },
       found(),
     );

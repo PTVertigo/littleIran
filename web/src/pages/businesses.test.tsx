@@ -23,10 +23,20 @@ const businesses = [
   { id: '2', name: 'Pars Rug Gallery', category: 'Retail', city: 'Oakville', description: 'Hand-knotted rugs.' },
 ];
 
+const filterCategories = {
+  status: 200,
+  body: {
+    categories: [
+      { id: '1', name: 'Restaurant' },
+      { id: '2', name: 'Retail' },
+    ],
+  },
+};
+
 // REQ-3.3.1
 describe('Business directory page', () => {
   it('lists each business with its name, category, city and description', async () => {
-    const fetchMock = mockFetch(signedOut, { status: 200, body: { businesses } });
+    const fetchMock = mockFetch(signedOut, filterCategories, { status: 200, body: { businesses } });
     renderApp('/businesses');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Business directory' })).toBeInTheDocument();
@@ -40,23 +50,23 @@ describe('Business directory page', () => {
     expect(cards[0]).toHaveTextContent('Kebabs and stews.');
     expect(within(cards[1]).getByRole('heading', { level: 2, name: 'Pars Rug Gallery' })).toBeInTheDocument();
     expect(cards[1]).toHaveTextContent('Retail · Oakville');
-    expect(fetchMock.mock.calls[1][0]).toBe('/api/businesses');
+    expect(fetchMock.mock.calls[2][0]).toBe('/api/businesses');
   });
 
   it('shows how many businesses there are, in the right grammar', async () => {
-    mockFetch(signedOut, { status: 200, body: { businesses } });
+    mockFetch(signedOut, filterCategories, { status: 200, body: { businesses } });
     renderApp('/businesses');
     expect(await screen.findByText('2 businesses')).toBeInTheDocument();
   });
 
   it('says "1 business" for a single listing', async () => {
-    mockFetch(signedOut, { status: 200, body: { businesses: [businesses[0]] } });
+    mockFetch(signedOut, filterCategories, { status: 200, body: { businesses: [businesses[0]] } });
     renderApp('/businesses');
     expect(await screen.findByText('1 business')).toBeInTheDocument();
   });
 
   it('is open to a visitor who is not logged in', async () => {
-    mockFetch(signedOut, { status: 200, body: { businesses } });
+    mockFetch(signedOut, filterCategories, { status: 200, body: { businesses } });
     const router = renderApp('/businesses');
 
     await screen.findAllByRole('article');
@@ -64,7 +74,7 @@ describe('Business directory page', () => {
   });
 
   it('is open to a logged-in member too', async () => {
-    mockFetch(signedIn, { status: 200, body: { businesses } });
+    mockFetch(signedIn, filterCategories, { status: 200, body: { businesses } });
     renderApp('/businesses');
 
     expect(await screen.findAllByRole('article')).toHaveLength(2);
@@ -76,6 +86,7 @@ describe('Business directory page', () => {
     global.fetch = jest
       .fn()
       .mockResolvedValueOnce({ ok: false, status: 401, json: async () => signedOut.body })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => filterCategories.body })
       .mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
     renderApp('/businesses');
 
@@ -88,7 +99,7 @@ describe('Business directory page', () => {
   });
 
   it('says so plainly when there are no businesses yet', async () => {
-    mockFetch(signedOut, { status: 200, body: { businesses: [] } });
+    mockFetch(signedOut, filterCategories, { status: 200, body: { businesses: [] } });
     renderApp('/businesses');
 
     expect(await screen.findByText('No businesses have been listed yet.')).toBeInTheDocument();
@@ -97,7 +108,7 @@ describe('Business directory page', () => {
 
   // REQ-4.2.1
   it('explains a failure in plain words', async () => {
-    mockFetch(signedOut, { status: 500, body: { error: 'Something went wrong. Please try again.' } });
+    mockFetch(signedOut, filterCategories, { status: 500, body: { error: 'Something went wrong. Please try again.' } });
     renderApp('/businesses');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong. Please try again.');
@@ -107,7 +118,7 @@ describe('Business directory page', () => {
   // REQ-4.1.3
   it('shows a name containing markup as plain text', async () => {
     const hostile = [{ ...businesses[0], name: '<script>alert(1)</script>', description: '<img src=x onerror=alert(1)>' }];
-    mockFetch(signedOut, { status: 200, body: { businesses: hostile } });
+    mockFetch(signedOut, filterCategories, { status: 200, body: { businesses: hostile } });
     renderApp('/businesses');
 
     await screen.findByRole('heading', { level: 2, name: '<script>alert(1)</script>' });
@@ -117,7 +128,7 @@ describe('Business directory page', () => {
 
   // REQ-4.4.2 one click from the home page, and from the navigation on every page
   it('is one click away from the home page button', async () => {
-    mockFetch(signedOut, { status: 200, body: { businesses } });
+    mockFetch(signedOut, filterCategories, { status: 200, body: { businesses } });
     renderApp('/');
 
     await userEvent.click(await screen.findByRole('link', { name: 'Browse businesses' }));
@@ -126,7 +137,7 @@ describe('Business directory page', () => {
   });
 
   it('is one click away from the navigation, whether or not you are logged in', async () => {
-    mockFetch(signedIn, { status: 200, body: { businesses } });
+    mockFetch(signedIn, filterCategories, { status: 200, body: { businesses } });
     renderApp('/dashboard');
     await screen.findByRole('heading', { name: /Welcome/ });
 

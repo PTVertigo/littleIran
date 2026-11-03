@@ -290,6 +290,130 @@ describe('GET /api/businesses?search=', () => {
   });
 });
 
+// REQ-3.7.4
+describe('GET /api/businesses?category=', () => {
+  const filter = (category: string, search?: string) =>
+    request(app).get('/api/businesses').query(search === undefined ? { category } : { category, search });
+  const names = (res: request.Response) => res.body.businesses.map((b: { name: string }) => b.name);
+
+  beforeEach(async () => {
+    await addBusiness({ name: 'Norouz Restaurant' }, 'Restaurant');
+    await addBusiness({ name: 'Persian Cafe' }, 'Restaurant');
+    await addBusiness({ name: 'Persian Rug Gallery' }, 'Retail');
+    await addBusiness({ name: 'Hafez Clinic' }, 'Health & Wellness');
+  });
+
+  it('lists only the businesses in that category', async () => {
+    expect(names(await filter('Restaurant'))).toEqual(['Norouz Restaurant', 'Persian Cafe']);
+    expect(names(await filter('Retail'))).toEqual(['Persian Rug Gallery']);
+  });
+
+  it('shows the category on each result, and the same basic information as the directory', async () => {
+    const [business] = (await filter('Retail')).body.businesses;
+
+    expect(business.category).toBe('Retail');
+    expect(Object.keys(business).sort()).toEqual(['category', 'city', 'description', 'id', 'name']);
+  });
+
+  it('ignores upper and lower case in the category name', async () => {
+    expect(names(await filter('rEsTaUrAnT'))).toEqual(['Norouz Restaurant', 'Persian Cafe']);
+  });
+
+  it('finds a category whose name has a space and an ampersand', async () => {
+    expect(names(await filter('Health & Wellness'))).toEqual(['Hafez Clinic']);
+  });
+
+  it('matches the whole category name, not part of it', async () => {
+    expect(names(await filter('Rest'))).toEqual([]);
+    expect(names(await filter('Health'))).toEqual([]);
+  });
+
+  it('combines with a search: the business must be in the category and match every word', async () => {
+    expect(names(await filter('Restaurant', 'persian'))).toEqual(['Persian Cafe']);
+    expect(names(await filter('Retail', 'persian'))).toEqual(['Persian Rug Gallery']);
+    expect(names(await filter('Retail', 'cafe'))).toEqual([]);
+  });
+
+  it('lists everything for a blank category, as if there were none', async () => {
+    expect(names(await filter(''))).toHaveLength(4);
+    expect(names(await filter('   '))).toHaveLength(4);
+  });
+
+  it('answers with an empty list, not an error, for a category nobody has or that is for events', async () => {
+    for (const category of ['Grocery', 'Festival', 'Nonexistent']) {
+      const res = await filter(category);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ businesses: [] });
+    }
+  });
+
+  it('answers with an empty list for a category that has no businesses yet', async () => {
+    expect(names(await filter('Entertainment'))).toEqual([]);
+  });
+
+  it('never returns a pending or rejected listing, even in the right category', async () => {
+    await addBusiness({ name: 'Waiting Cafe', status: 'pending' }, 'Restaurant');
+    await addBusiness({ name: 'Refused Cafe', status: 'rejected', rejection_reason: 'No address.' }, 'Restaurant');
+
+    expect(names(await filter('Restaurant'))).toEqual(['Norouz Restaurant', 'Persian Cafe']);
+  });
+
+  it('keeps the results in name order', async () => {
+    await addBusiness({ name: 'aardvark Diner' }, 'Restaurant');
+
+    expect(names(await filter('Restaurant'))).toEqual(['aardvark Diner', 'Norouz Restaurant', 'Persian Cafe']);
+  });
+
+  // REQ-4.1.1
+  it.each([
+    "'; DROP TABLE businesses;--",
+    "Restaurant' OR '1'='1",
+    "' UNION SELECT id, email, password_hash, email, email FROM users--",
+    '"; SELECT pg_sleep(5);--',
+    '$1',
+    '%',
+    '_',
+  ])('treats the category %p as plain text, finds nothing, and changes nothing', async (attempt) => {
+    const started = Date.now();
+
+    const res = await filter(attempt);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ businesses: [] });
+    expect(Date.now() - started).toBeLessThan(4000);
+    expect((await pool.query('SELECT count(*)::int AS n FROM businesses')).rows[0].n).toBe(4);
+  });
+
+  it('refuses a category name over 100 characters', async () => {
+    const res = await filter('a'.repeat(101));
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'That category name is too long.' });
+  });
+
+  it('refuses more than one category', async () => {
+    const res = await request(app).get('/api/businesses?category=Retail&category=Restaurant');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Choose a single category.' });
+  });
+
+  it('refuses a null character without a server error', async () => {
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const res = await request(app).get('/api/businesses?category=Re%00tail');
+
+    expect(res.status).toBe(400);
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
+  it('is open to a visitor who is not logged in', async () => {
+    expect((await filter('Retail')).status).toBe(200);
+  });
+});
+
 // REQ-3.3.2
 describe('GET /api/businesses/:id', () => {
   it('returns the name, address, phone, email, website, hours, description and category', async () => {

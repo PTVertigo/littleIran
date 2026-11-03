@@ -20,3 +20,16 @@ export function parseSearch(raw: unknown): { terms: string[] } | { error: string
 export function escapeLike(term: string): string {
   return term.replace(/[\\%_]/g, '\\$&');
 }
+
+// REQ-3.7.4 the category to filter by, as its name. Unknown names are not an error: they find nothing.
+export const CATEGORY_MAX_LENGTH = 100;
+
+export function parseCategoryFilter(raw: unknown): { category: string | null } | { error: string } {
+  if (raw === undefined) return { category: null };
+  if (typeof raw !== 'string') return { error: 'Choose a single category.' };
+
+  const name = raw.trim();
+  if (name.length > CATEGORY_MAX_LENGTH) return { error: 'That category name is too long.' };
+  if (name.includes('\0')) return { error: 'That category contains characters that are not allowed.' };
+  return { category: name || null };
+}

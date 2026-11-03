@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { validateBusiness } from '../business-validation';
 import { pool } from '../db';
 import { requireAuth } from '../middleware/auth';
-import { escapeLike, parseSearch } from '../search';
+import { escapeLike, parseCategoryFilter, parseSearch } from '../search';
 import { isRecordId } from '../validation';
 
 export const businessesRouter = Router();
@@ -10,23 +10,33 @@ export const businessesRouter = Router();
 // REQ-3.3.1 browse businesses: every approved listing, open to everyone because approval is what makes
 // a listing public. Only the basic information is listed; pending and rejected listings never appear.
 // REQ-3.7.1 ?search=... narrows it to businesses whose name or category contains every word typed.
+// REQ-3.7.4 ?category=... narrows it to one category, by name. Both can be combined.
 businessesRouter.get('/', async (req, res) => {
   const search = parseSearch(req.query.search);
   if ('error' in search) {
     res.status(400).json({ error: search.error });
     return;
   }
+  const filter = parseCategoryFilter(req.query.category);
+  if ('error' in filter) {
+    res.status(400).json({ error: filter.error });
+    return;
+  }
 
   // One condition per word, built only from parameter numbers. The words themselves are parameters.
-  const patterns = search.terms.map((term) => `%${escapeLike(term)}%`);
-  const conditions = patterns.map((_, i) => `AND (b.name ILIKE $${i + 1} OR c.name ILIKE $${i + 1})`).join(' ');
+  const params: string[] = search.terms.map((term) => `%${escapeLike(term)}%`);
+  const conditions = params.map((_, i) => `AND (b.name ILIKE $${i + 1} OR c.name ILIKE $${i + 1})`);
+  if (filter.category) {
+    params.push(filter.category);
+    conditions.push(`AND lower(c.name) = lower($${params.length})`);
+  }
 
   const { rows } = await pool.query(
     `SELECT b.id, b.name, c.name AS category, b.city, b.description
      FROM businesses b JOIN categories c ON c.id = b.category_id
-     WHERE b.status = 'approved' ${conditions}
+     WHERE b.status = 'approved' ${conditions.join(' ')}
      ORDER BY lower(b.name), b.id`,
-    patterns,
+    params,
   );
   res.json({ businesses: rows });
 });

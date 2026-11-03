@@ -56,6 +56,14 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     expectNoViolations();
   });
 
+  it('business directory filtered by a category has no violations', () => {
+    cy.visit('/businesses?category=Retail');
+    // Wait for the buttons and the results, so the pressed button's colours are what gets scanned
+    cy.get('.chip[aria-pressed="true"]').should('contain', 'Retail');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+  });
+
   it('business search results have no violations', () => {
     cy.visit('/businesses?search=restaurant');
     cy.get('article').should('have.length.at.least', 1);
@@ -171,6 +179,14 @@ describe('Accessibility in dark mode', () => {
       cy.get('main h1').should('be.visible');
       expectNoViolations();
     });
+  });
+
+  it('business directory filtered by a category has no violations', () => {
+    cy.visit('/businesses?category=Retail');
+    // Wait for the buttons and the results, so the pressed button's colours are what gets scanned
+    cy.get('.chip[aria-pressed="true"]').should('contain', 'Retail');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
   });
 
   it('a form showing its errors has no violations', () => {
