@@ -1,5 +1,7 @@
 import { Router } from 'express';
+import { validateEvent } from '../event-validation';
 import { pool } from '../db';
+import { requireAuth } from '../middleware/auth';
 import { isRecordId } from '../validation';
 
 export const eventsRouter = Router();
@@ -19,6 +21,52 @@ eventsRouter.get('/', async (_req, res) => {
               e.id`,
   );
   res.json({ events: rows });
+});
+
+// REQ-3.4 create an event. It starts as pending and belongs to the member who submitted it; it only
+// appears on the events page once an administrator approves it (REQ-3.8.2).
+eventsRouter.post('/', requireAuth, async (req, res) => {
+  const { errors, value } = validateEvent(req.body);
+  if (!value) {
+    res.status(400).json({ errors });
+    return;
+  }
+
+  const category = await pool.query("SELECT 1 FROM categories WHERE id = $1 AND type = 'event'", [value.categoryId]);
+  if (!category.rowCount) {
+    res.status(400).json({ errors: { categoryId: 'Choose a category.' } });
+    return;
+  }
+
+  // The date and times are Ontario wall-clock time; the database turns them into instants
+  const { rows } = await pool.query<{ id: string }>(
+    `WITH times AS (
+       SELECT ($1::date + $2::time) AT TIME ZONE 'America/Toronto' AS starts_at,
+              CASE WHEN $3::time IS NULL THEN NULL ELSE ($1::date + $3::time) AT TIME ZONE 'America/Toronto' END AS ends_at
+     )
+     INSERT INTO events (user_id, category_id, title, description, location, starts_at, ends_at, organizer_name, organizer_contact)
+     SELECT $4, $5, $6, $7, $8, starts_at, ends_at, $9, $10 FROM times
+     WHERE starts_at > now() AND starts_at < now() + interval '3 years'
+     RETURNING id`,
+    [
+      value.date,
+      value.startTime,
+      value.endTime,
+      req.auth!.user.id,
+      value.categoryId,
+      value.title,
+      value.description,
+      value.location,
+      value.organizerName,
+      value.organizerContact,
+    ],
+  );
+  if (!rows[0]) {
+    // Not in the future, or too far ahead to be a real plan
+    res.status(400).json({ errors: { date: 'Choose a date and time that have not passed yet, within the next three years.' } });
+    return;
+  }
+  res.status(201).json({ event: { id: rows[0].id, title: value.title, status: 'pending' } });
 });
 
 // REQ-3.4.2 one event in full, with its organizer. A pending or rejected event answers "not found",

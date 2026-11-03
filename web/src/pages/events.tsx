@@ -23,6 +23,11 @@ export function EventsPage() {
     <section>
       <h1>Cultural events</h1>
       <p className="muted">Festivals, workshops and gatherings across Southern Ontario. Times are Ontario time.</p>
+      <p className="page-actions">
+        <Link to="/events/new" className="button">
+          Add an event
+        </Link>
+      </p>
       <EventList />
     </section>
   );
