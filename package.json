@@ -8,7 +8,11 @@
     "test": "npm --prefix server test && npm --prefix web test",
     "cy:open": "env -u ELECTRON_RUN_AS_NODE cypress open --project web",
     "cy:run": "env -u ELECTRON_RUN_AS_NODE cypress run --project web",
-    "typecheck": "npm --prefix server run typecheck && npm --prefix web run typecheck"
+    "typecheck": "npm --prefix server run typecheck && npm --prefix web run typecheck",
+    "test:plan": "npm run test:plan:server && npm run test:plan:web && npm run test:plan:cypress",
+    "test:plan:server": "npm --prefix server test -- tests/test-plan.test.ts",
+    "test:plan:web": "npm --prefix web test -- src/test-plan.test.tsx",
+    "test:plan:cypress": "npm run cy:run -- --spec web/cypress/e2e/test-plan.cy.ts"
   },
   "devDependencies": {
     "axe-core": "^4.14.0",
