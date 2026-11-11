@@ -162,6 +162,17 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     });
   });
 
+  it('forum category page, and its second page, have no violations', () => {
+    cy.request('/api/categories?type=forum').its('body.categories.0.id').then((id) => {
+      cy.visit(`/forum/categories/${id}`);
+      cy.get('article').should('have.length.at.least', 1);
+      expectNoViolations();
+      cy.visit(`/forum/categories/${id}?page=2`);
+      cy.get('nav[aria-label="Forum post pages"] [aria-current="page"]').should('have.text', '2');
+      expectNoViolations();
+    });
+  });
+
   it('profile page has no violations', () => {
     logIn();
     cy.visit('/profile');

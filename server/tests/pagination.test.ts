@@ -1,4 +1,4 @@
-import { PAGE_SIZE, pageDetails, parsePage } from '../src/pagination';
+import { FORUM_PAGE_SIZE, PAGE_SIZE, pageDetails, parsePage } from '../src/pagination';
 
 describe('parsePage', () => {
   it('starts at page 1 when no page is given', () => {
@@ -24,5 +24,16 @@ describe('pageDetails', () => {
 
   it.each([[0, 1], [1, 1], [10, 1], [11, 2], [20, 2], [21, 3], [95, 10]])('%p items make %p pages', (total, totalPages) => {
     expect(pageDetails(1, total)).toEqual({ page: 1, pageSize: 10, total, totalPages });
+  });
+});
+
+// REQ-3.7.9
+describe('pageDetails for the forum', () => {
+  it('shows 15 to a page', () => {
+    expect(FORUM_PAGE_SIZE).toBe(15);
+  });
+
+  it.each([[0, 1], [15, 1], [16, 2], [30, 2], [31, 3]])('%p posts make %p pages', (total, totalPages) => {
+    expect(pageDetails(1, total, FORUM_PAGE_SIZE)).toEqual({ page: 1, pageSize: 15, total, totalPages });
   });
 });

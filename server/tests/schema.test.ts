@@ -273,4 +273,79 @@ describe('Sample business listings (npm run seed:listings)', () => {
     expect(rows.filter((e) => e.ends_at < new Date()).length).toBeGreaterThanOrEqual(1);
     expect(rows.filter((e) => e.category === 'Cultural Events').length).toBeGreaterThanOrEqual(3);
   });
+
+  it('adds approved forum posts: 16 in General Discussion for a second page of 15, and some elsewhere', async () => {
+    runSeed();
+
+    const { rows } = await pool.query(
+      `SELECT p.status, p.user_id, c.name AS category
+       FROM forum_posts p JOIN categories c ON c.id = p.category_id`,
+    );
+    expect(rows.every((p) => p.status === 'approved' && p.user_id === null)).toBe(true);
+    expect(rows.filter((p) => p.category === 'General Discussion')).toHaveLength(16);
+    expect(new Set(rows.map((p) => p.category)).size).toBe(5);
+  });
+
+  it('adds no forum posts the second time', async () => {
+    runSeed();
+    const before = (await pool.query('SELECT count(*)::int AS n FROM forum_posts')).rows[0].n;
+
+    const output = runSeed();
+
+    expect((await pool.query('SELECT count(*)::int AS n FROM forum_posts')).rows[0].n).toBe(before);
+    expect(output).toContain('added 0 sample forum posts');
+  });
+});
+
+// Forum Post Data, Milestone 4 §2.2
+describe('Forum posts', () => {
+  const addPost = async (overrides: Record<string, unknown> = {}) => {
+    const values = {
+      category_id: await categoryId('forum', 'General Discussion'),
+      title: 'A post',
+      content: 'Some words.',
+      ...overrides,
+    };
+    const columns = Object.keys(values);
+    const { rows } = await pool.query(
+      `INSERT INTO forum_posts (${columns.join(', ')}) VALUES (${columns.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING id`,
+      Object.values(values),
+    );
+    return rows[0].id as string;
+  };
+
+  it('starts a new post as approved, with no views and no edit date', async () => {
+    const id = await addPost();
+
+    const { rows } = await pool.query('SELECT status, views, edited_at, user_id FROM forum_posts WHERE id = $1', [id]);
+
+    expect(rows[0]).toEqual({ status: 'approved', views: 0, edited_at: null, user_id: null });
+  });
+
+  it('only accepts a forum category', async () => {
+    await expect(addPost({ category_id: await categoryId('event', 'Festival') })).rejects.toThrow();
+    await expect(addPost({ category_id: await categoryId('business', 'Restaurant') })).rejects.toThrow();
+    await expect(addPost({ category_id: '999999' })).rejects.toThrow();
+  });
+
+  it('refuses a missing title or content, an unknown status and negative views', async () => {
+    await expect(addPost({ title: null })).rejects.toThrow();
+    await expect(addPost({ content: null })).rejects.toThrow();
+    await expect(addPost({ status: 'deleted' })).rejects.toThrow();
+    await expect(addPost({ views: -1 })).rejects.toThrow();
+    await expect(addPost({ status: 'hidden' })).resolves.toBeDefined();
+  });
+
+  // REQ-3.2.4
+  it('keeps the post, without an author, when the author\'s account is deleted', async () => {
+    const { rows: users } = await pool.query(
+      "INSERT INTO users (email, password_hash, first_name, last_name) VALUES ('writer@test.com', 'x', 'Wri', 'Ter') RETURNING id",
+    );
+    const id = await addPost({ user_id: users[0].id });
+
+    await pool.query('DELETE FROM users WHERE id = $1', [users[0].id]);
+
+    const { rows } = await pool.query('SELECT user_id FROM forum_posts WHERE id = $1', [id]);
+    expect(rows).toEqual([{ user_id: null }]);
+  });
 });

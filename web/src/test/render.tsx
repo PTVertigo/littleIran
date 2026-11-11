@@ -37,3 +37,13 @@ export function eventPage(events: object[], paging: { page?: number; total?: num
   const total = paging.total ?? events.length;
   return { events, page: paging.page ?? 1, pageSize: 10, total, totalPages: paging.totalPages ?? Math.max(1, Math.ceil(total / 10)) };
 }
+
+// The body of GET /api/forum/categories/:id/posts: one page of posts, with the paging details the server adds
+export function forumPostPage(
+  posts: object[],
+  paging: { page?: number; total?: number; totalPages?: number } = {},
+  category = { id: '1', name: 'General Discussion' },
+) {
+  const total = paging.total ?? posts.length;
+  return { category, posts, page: paging.page ?? 1, pageSize: 15, total, totalPages: paging.totalPages ?? Math.max(1, Math.ceil(total / 15)) };
+}

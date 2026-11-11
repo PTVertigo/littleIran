@@ -17,6 +17,15 @@ describe('Forum categories', () => {
     });
   });
 
+  it('links each category to its posts', () => {
+    cy.visit('/forum');
+
+    cy.get('article h3 a').should('have.length', 5);
+    cy.contains('article h3 a', 'Q&A').click();
+    cy.location('pathname').should('match', /^\/forum\/categories\/\d+$/);
+    cy.contains('h1', 'Q&A');
+  });
+
   it('is reached from the navigation and from the home page button', () => {
     cy.visit('/');
     cy.contains('a', 'Join the forum').click();

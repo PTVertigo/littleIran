@@ -62,6 +62,14 @@ describe('Responsive layout (REQ-4.4.1)', () => {
         });
       });
 
+      it('forum category posts fit the screen', () => {
+        cy.request('/api/categories?type=forum').its('body.categories.0.id').then((id) => {
+          cy.visit(`/forum/categories/${id}`);
+          cy.get('main h1').should('be.visible');
+          noSideScroll();
+        });
+      });
+
       it('business details fit the screen', () => {
         cy.request('/api/businesses').its('body.businesses.0.id').then((id) => {
           cy.visit(`/businesses/${id}`);

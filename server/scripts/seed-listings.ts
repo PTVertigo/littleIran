@@ -142,8 +142,57 @@ async function seedEvents() {
   console.log(`added ${added} sample events, ${EVENT_SAMPLES.length - added} were already there`);
 }
 
+// Sample forum posts, so the forum has something to show and its pagination can be tried: 16 in General
+// Discussion (a page of 15 and a page of 1) and a few elsewhere. They belong to no account. The n-th post
+// is made n hours ago, so the order is the same every time. A post whose title exists is skipped.
+const FORUM_TOPICS: [category: string, title: string, content: string][] = [
+  ['General Discussion', 'Welcome to the LittleIran forum', 'Introduce yourself and tell us which part of Southern Ontario you call home.'],
+  ['General Discussion', 'Where do you buy fresh sangak bread?', 'Looking for a bakery that still bakes sangak on stones. Hamilton or Toronto would be perfect.'],
+  ['General Discussion', 'Moving to Hamilton: what should I know?', 'We arrive next month. Neighbourhoods, schools and community groups are all welcome tips.'],
+  ['General Discussion', 'Learning Farsi as an adult', 'Which classes, apps or conversation groups helped you the most?'],
+  ['General Discussion', 'Favourite Persian poets', 'Hafez, Saadi, Rumi, Forough. Who do you read again and again?'],
+  ['General Discussion', 'Winter in Ontario survival tips', 'How do you keep the family warm, fed and cheerful from December to March?'],
+  ['General Discussion', 'Volunteering with the community', 'Which organizations are looking for volunteers this year?'],
+  ['General Discussion', 'Best tea shops in the GTA', 'Loose leaf, cardamom, saffron rock sugar. Share your finds.'],
+  ['General Discussion', 'Do you celebrate Chaharshanbe Suri here?', 'Where is it safe and allowed to jump the fire in the city?'],
+  ['General Discussion', 'Looking for a santur teacher', 'My daughter wants to start lessons. Online or in person is fine.'],
+  ['General Discussion', 'Carpooling to Toronto events', 'Anyone driving in from Burlington or Oakville on weekends?'],
+  ['General Discussion', 'Recipes you grew up with', 'Share a family recipe and the story behind it.'],
+  ['General Discussion', 'Persian movies worth watching', 'Recent favourites, with or without English subtitles.'],
+  ['General Discussion', 'Starting a book club', 'Reading in Farsi and English. Would you join?'],
+  ['General Discussion', 'Photos from the last festival', 'Add your favourite moments from the spring celebration.'],
+  ['General Discussion', 'Thank you, neighbours', 'A short note of thanks to everyone who helped us settle in.'],
+  ['Business Recommendations', 'A good Persian accountant?', 'Looking for someone who can do tax filing for a small business and speaks Farsi.'],
+  ['Business Recommendations', 'Rug cleaning that really works', 'Have you used a service that treated a hand-knotted rug well?'],
+  ['Event Planning', 'Ideas for a Yalda night potluck', 'We have a hall for 60 people. What should we cook and play?'],
+  ['Event Planning', 'Volunteers for the Norouz festival', 'We need help with setup, tea service and activities for children.'],
+  ['Cultural Exchange', 'Teaching nastaliq to beginners', 'Share the best resources for learning the script.'],
+  ['Cultural Exchange', 'Canadian traditions you enjoy', 'What did you adopt first after arriving?'],
+  ['Q&A', 'How do I renew a passport in Canada?', 'Which documents do you need, and how long did it take?'],
+  ['Q&A', 'Is there a Persian-speaking family doctor nearby?', 'Hamilton area if possible. Any leads are appreciated.'],
+];
+
+async function seedForum() {
+  let added = 0;
+  for (const [index, [category, title, content]] of FORUM_TOPICS.entries()) {
+    const existing = await pool.query('SELECT 1 FROM forum_posts WHERE title = $1', [title]);
+    if (existing.rowCount) continue;
+
+    const { rowCount } = await pool.query(
+      `INSERT INTO forum_posts (category_id, title, content, created_at)
+       SELECT c.id, $2, $3, now() - make_interval(hours => $4::int)
+       FROM categories c WHERE c.type = 'forum' AND c.name = $1`,
+      [category, title, content, index + 1],
+    );
+    if (!rowCount) throw new Error(`Unknown forum category: ${category}`);
+    added += 1;
+  }
+  console.log(`added ${added} sample forum posts, ${FORUM_TOPICS.length - added} were already there`);
+}
+
 seedListings()
   .then(seedEvents)
+  .then(seedForum)
   .catch((err) => {
     console.error(err);
     process.exitCode = 1;

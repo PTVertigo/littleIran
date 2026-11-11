@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 
 import { ErrorBanner } from '../components/error-banner';
 import { Spinner } from '../components/spinner';
@@ -6,8 +7,8 @@ import { ApiError, apiRequest } from '../lib/api';
 
 type ForumCategory = { id: string; name: string };
 
-// REQ-3.5.1 the discussion forum lists every forum category, open to everyone. The posts inside each
-// category come with REQ-3.5.2.
+// REQ-3.5.1 the discussion forum lists every forum category, open to everyone. Each one opens its
+// posts (REQ-3.5.2).
 export function ForumPage() {
   const [categories, setCategories] = useState<ForumCategory[] | null>(null);
   const [error, setError] = useState('');
@@ -35,7 +36,9 @@ export function ForumPage() {
             {categories.map((category) => (
               <li key={category.id}>
                 <article className="card">
-                  <h3>{category.name}</h3>
+                  <h3>
+                    <Link to={`/forum/categories/${category.id}`}>{category.name}</Link>
+                  </h3>
                 </article>
               </li>
             ))}
