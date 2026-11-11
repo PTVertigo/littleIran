@@ -15,6 +15,7 @@ const pages = [
   ['business directory', '/businesses'],
   ['business directory, second page', '/businesses?page=2'],
   ['events', '/events'],
+  ['forum', '/forum'],
   ['events filtered and searched', '/events?category=Workshop&search=persian'],
   ['login', '/login'],
   ['register', '/register'],

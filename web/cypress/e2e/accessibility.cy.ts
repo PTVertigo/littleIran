@@ -34,6 +34,7 @@ const publicPages = [
   ['home', '/'],
   ['business directory', '/businesses'],
   ['events', '/events'],
+  ['forum', '/forum'],
   ['login', '/login'],
   ['register', '/register'],
   ['forgot password', '/forgot-password'],

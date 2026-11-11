@@ -83,9 +83,23 @@ describe('Categories', () => {
     ]);
   });
 
+  // REQ-3.5.1 data definition: Forum Post Data
+  it('holds the forum categories from the data definition', async () => {
+    const { rows } = await pool.query("SELECT name FROM categories WHERE type = 'forum' ORDER BY id");
+
+    expect(rows.map((r) => r.name)).toEqual([
+      'General Discussion',
+      'Business Recommendations',
+      'Event Planning',
+      'Cultural Exchange',
+      'Q&A',
+    ]);
+  });
+
   it('refuses a duplicate name within one type and a type that does not exist', async () => {
     await expect(pool.query("INSERT INTO categories (name, type) VALUES ('Restaurant', 'business')")).rejects.toThrow();
-    await expect(pool.query("INSERT INTO categories (name, type) VALUES ('Anything', 'forum')")).rejects.toThrow();
+    await expect(pool.query("INSERT INTO categories (name, type) VALUES ('General Discussion', 'forum')")).rejects.toThrow();
+    await expect(pool.query("INSERT INTO categories (name, type) VALUES ('Anything', 'blog')")).rejects.toThrow();
   });
 });
 

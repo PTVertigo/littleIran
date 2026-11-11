@@ -11,6 +11,7 @@ import { ChangePasswordPage } from './pages/change-password';
 import { DashboardPage } from './pages/dashboard';
 import { EditProfilePage } from './pages/edit-profile';
 import { ErrorPage } from './pages/error';
+import { ForumPage } from './pages/forum';
 import { ForgotPasswordPage } from './pages/forgot-password';
 import { HomePage } from './pages/home';
 import { LoginPage } from './pages/login';
@@ -34,6 +35,7 @@ export const routes: RouteObject[] = [
           { path: 'businesses/:id', element: <BusinessDetailPage /> },
           { path: 'events', element: <EventsPage /> },
           { path: 'events/:id', element: <EventDetailPage /> },
+          { path: 'forum', element: <ForumPage /> },
           {
             element: <GuestOnly />,
             children: [

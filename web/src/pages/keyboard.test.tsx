@@ -18,6 +18,7 @@ describe('Keyboard navigation', () => {
       'Home',
       'Businesses',
       'Events',
+      'Forum',
       'Log in',
       'Sign up',
       'Email',
@@ -70,7 +71,7 @@ describe('Keyboard navigation', () => {
     await screen.findAllByRole('article');
 
     const order = [
-      'Skip to main content', 'LittleIran', 'Home', 'Businesses', 'Events', 'Log in', 'Sign up',
+      'Skip to main content', 'LittleIran', 'Home', 'Businesses', 'Events', 'Forum', 'Log in', 'Sign up',
       'Add an event', 'Search events', 'Search', 'All', 'Festival',
       'Event 1', 'Event 2', 'Event 3', 'Event 4', 'Event 5', 'Event 6', 'Event 7', 'Event 8', 'Event 9', 'Event 10',
       'Previous', 'Page 1', 'Page 2', 'Next',
@@ -92,7 +93,7 @@ describe('Keyboard navigation', () => {
     await screen.findAllByRole('article');
 
     const order = [
-      'Skip to main content', 'LittleIran', 'Home', 'Businesses', 'Events', 'Log in', 'Sign up',
+      'Skip to main content', 'LittleIran', 'Home', 'Businesses', 'Events', 'Forum', 'Log in', 'Sign up',
       'Add a business', 'Search businesses', 'Search', 'All', 'Restaurant', 'Cafe 1', 'Cafe 2',
     ];
     for (const name of order) {

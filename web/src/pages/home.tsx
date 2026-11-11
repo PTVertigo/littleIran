@@ -13,6 +13,9 @@ export function HomePage() {
         </Link>{' '}
         <Link to="/events" className="button">
           Browse events
+        </Link>{' '}
+        <Link to="/forum" className="button">
+          Join the forum
         </Link>
       </p>
     </section>

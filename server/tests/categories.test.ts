@@ -37,19 +37,35 @@ describe('GET /api/categories', () => {
     ]);
   });
 
-  it('never mixes the two kinds', async () => {
-    const business = (await request(app).get('/api/categories?type=business')).body.categories;
-    const event = (await request(app).get('/api/categories?type=event')).body.categories;
+  // REQ-3.5.1
+  it('lists the forum categories in order', async () => {
+    const res = await request(app).get('/api/categories?type=forum');
 
-    const ids = new Set([...business, ...event].map((c: { id: string }) => c.id));
-    expect(ids.size).toBe(business.length + event.length);
+    expect(res.status).toBe(200);
+    expect(res.body.categories.map((c: { name: string }) => c.name)).toEqual([
+      'General Discussion',
+      'Business Recommendations',
+      'Event Planning',
+      'Cultural Exchange',
+      'Q&A',
+    ]);
+    expect(res.body.categories[0]).toEqual({ id: expect.any(String), name: 'General Discussion' });
   });
 
-  it.each(['', 'forum', 'business,event', "business'; DROP TABLE categories;--"])('asks for a valid type instead of %p', async (type) => {
+  it('never mixes the three kinds', async () => {
+    const lists = await Promise.all(
+      ['business', 'event', 'forum'].map(async (type) => (await request(app).get(`/api/categories?type=${type}`)).body.categories),
+    );
+
+    const ids = new Set(lists.flat().map((c: { id: string }) => c.id));
+    expect(ids.size).toBe(lists.reduce((sum, list) => sum + list.length, 0));
+  });
+
+  it.each(['', 'forums', 'business,event', "business'; DROP TABLE categories;--"])('asks for a valid type instead of %p', async (type) => {
     const res = await request(app).get(`/api/categories?type=${encodeURIComponent(type)}`);
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ error: 'Choose a category type: business or event.' });
+    expect(res.body).toEqual({ error: 'Choose a category type: business, event or forum.' });
   });
 
   it('asks for a type when none is given, or when it is given twice', async () => {

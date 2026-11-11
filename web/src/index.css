@@ -242,7 +242,8 @@ main:focus {
   border-radius: var(--radius);
 }
 
-.card h2 {
+.card h2,
+.card h3 {
   margin: 0 0 var(--space-1);
   font-size: 1.125rem;
 }
