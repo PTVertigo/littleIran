@@ -91,8 +91,21 @@ describe('Front-end functional tests', () => {
   });
 
   // F3.3, F3.4 · forum post: title, category, content, Submit · expected: post created, confirmation shown.
-  // Forum posts are built in Milestone 3 (Week 7), so this case is pending.
-  it.skip('FE-005 create forum post submission (built in Milestone 3, Week 7)', () => {});
+  // The post goes into Cultural Exchange, the one forum category no other spec counts.
+  it('FE-005 create forum post submission: title, category and content, then Publish post, shows the confirmation', () => {
+    const title = `FE-005 post ${Date.now()}`;
+    logIn('test@test.com', 'Test123@');
+    cy.location('pathname').should('eq', '/dashboard');
+
+    cy.visit('/forum/posts/new');
+    cy.get('input[maxlength="150"]').type(title);
+    cy.get('select').select('Cultural Exchange');
+    cy.get('textarea').type('Which calligraphy books do you recommend?');
+    cy.contains('button', 'Publish post').click();
+
+    cy.contains('h1', 'Post published');
+    cy.get('[role="status"]').should('contain', title);
+  });
 });
 
 // =========================================================================================================

@@ -23,6 +23,11 @@ export function ForumPage() {
     <section>
       <h1>Discussion forum</h1>
       <p className="muted">Ask questions, share recommendations and plan together with the community.</p>
+      <p className="page-actions">
+        <Link to="/forum/posts/new" className="button">
+          New post
+        </Link>
+      </p>
       {error ? (
         <ErrorBanner message={error} />
       ) : !categories ? (

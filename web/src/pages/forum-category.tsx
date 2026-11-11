@@ -114,6 +114,11 @@ function ForumCategoryView({ id }: { id: string }) {
     <section>
       {back}
       <h1>{category.name}</h1>
+      <p className="page-actions">
+        <Link to={`/forum/posts/new?category=${category.id}`} className="button">
+          New post
+        </Link>
+      </p>
       {total === 0 ? (
         <p>There are no posts in this category yet.</p>
       ) : (

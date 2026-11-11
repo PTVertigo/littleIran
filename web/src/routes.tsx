@@ -7,6 +7,7 @@ import { BusinessesPage } from './pages/businesses';
 import { EventDetailPage } from './pages/event-detail';
 import { EventsPage } from './pages/events';
 import { NewEventPage } from './pages/new-event';
+import { NewForumPostPage } from './pages/new-forum-post';
 import { ChangePasswordPage } from './pages/change-password';
 import { DashboardPage } from './pages/dashboard';
 import { EditProfilePage } from './pages/edit-profile';
@@ -56,6 +57,8 @@ export const routes: RouteObject[] = [
               { path: 'businesses/new', element: <NewBusinessPage /> },
               // Static, so it wins over events/:id; only a logged-in member can submit an event
               { path: 'events/new', element: <NewEventPage /> },
+              // Only a logged-in member can write a post
+              { path: 'forum/posts/new', element: <NewForumPostPage /> },
               { path: 'profile', element: <ProfilePage /> },
               { path: 'profile/edit', element: <EditProfilePage /> },
               { path: 'users/:id', element: <PublicProfilePage /> },

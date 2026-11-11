@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { browser, sessionToken } from './browser';
 import { createApp } from '../src/app';
 import { pool } from '../src/db';
 
@@ -188,5 +189,137 @@ describe('Forum post pagination', () => {
 
     expect(res.status).toBe(400);
     expect(res.body).toEqual({ error: 'Choose a page number from 1 upward.' });
+  });
+});
+
+// REQ-3.5 / FE-005 create a forum post
+describe('POST /api/forum/posts', () => {
+  let token: string;
+  let userId: string;
+  let generalId: string;
+
+  // Pass null to send the request with no session at all
+  const create = (body: object, session: string | null = token) => browser(app, session ?? undefined).post('/api/forum/posts').send(body);
+  const valid = (changes: object = {}) => ({ title: 'Best tea shops', categoryId: generalId, content: 'Where do you go?', ...changes });
+  const count = async () => (await pool.query('SELECT count(*)::int AS n FROM forum_posts')).rows[0].n as number;
+
+  beforeEach(async () => {
+    const registered = await browser(app).post('/api/users')
+      .send({ email: 'poster@test.com', password: 'Test123@', firstName: 'Pari', lastName: 'Poster' });
+    userId = registered.body.id;
+    token = sessionToken(await browser(app).post('/api/auth/login').send({ email: 'poster@test.com', password: 'Test123@' }))!;
+    generalId = await categoryId('General Discussion');
+  });
+
+  it('creates the post and answers 201', async () => {
+    const res = await create(valid());
+
+    expect(res.status).toBe(201);
+    expect(res.body.post).toEqual({ id: expect.any(String), title: 'Best tea shops', categoryId: generalId, status: 'approved' });
+  });
+
+  it('stores the author, the category and the text, with no views', async () => {
+    const id = (await create(valid({ title: '  Padded title  ', content: ' Padded content ' }))).body.post.id;
+
+    const { rows } = await pool.query('SELECT user_id, category_id, title, content, status, views, edited_at FROM forum_posts WHERE id = $1', [id]);
+
+    expect(rows[0]).toEqual({
+      user_id: userId,
+      category_id: generalId,
+      title: 'Padded title',
+      content: 'Padded content',
+      status: 'approved',
+      views: 0,
+      edited_at: null,
+    });
+  });
+
+  it('shows the new post first in its category, under the author\'s name', async () => {
+    await addPost({ title: 'Older post' }, 'General Discussion', 30);
+    await create(valid({ title: 'Fresh post' }));
+
+    const res = await posts('General Discussion');
+
+    expect(titles(res)).toEqual(['Fresh post', 'Older post']);
+    expect(res.body.posts[0]).toMatchObject({ authorId: userId, authorName: 'Pari Poster' });
+  });
+
+  it('answers 401 without a session, and stores nothing', async () => {
+    const res = await create(valid(), null);
+
+    expect(res.status).toBe(401);
+    expect(await count()).toBe(0);
+  });
+
+  it('answers 403 without the CSRF header, and stores nothing', async () => {
+    const res = await request(app).post('/api/forum/posts').set('Cookie', `sid=${token}`).send(valid());
+
+    expect(res.status).toBe(403);
+    expect(await count()).toBe(0);
+  });
+
+  it('answers 400 with a message per field, and stores nothing', async () => {
+    const res = await create({});
+
+    expect(res.status).toBe(400);
+    expect(res.body.errors).toEqual({
+      title: 'Enter a title for your post.',
+      categoryId: 'Choose a category.',
+      content: 'Write your post.',
+    });
+    expect(await count()).toBe(0);
+  });
+
+  it('refuses a business, an event and a missing category', async () => {
+    const business = (await pool.query("SELECT id FROM categories WHERE type = 'business' LIMIT 1")).rows[0].id;
+    const event = (await pool.query("SELECT id FROM categories WHERE type = 'event' LIMIT 1")).rows[0].id;
+
+    for (const id of [business, event, '999999']) {
+      const res = await create(valid({ categoryId: id }));
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toEqual({ categoryId: 'Choose a category.' });
+    }
+    expect(await count()).toBe(0);
+  });
+
+  it('refuses a title or post that is too long', async () => {
+    const res = await create(valid({ title: 'a'.repeat(151), content: 'a'.repeat(5001) }));
+
+    expect(res.status).toBe(400);
+    expect(Object.keys(res.body.errors).sort()).toEqual(['content', 'title']);
+    expect(await count()).toBe(0);
+  });
+
+  // REQ-4.1.1 SQL in the text is stored as text
+  it('stores SQL in the title as plain text', async () => {
+    const title = "'); DROP TABLE forum_posts;--";
+    const res = await create(valid({ title }));
+
+    expect(res.status).toBe(201);
+    expect((await pool.query('SELECT title FROM forum_posts WHERE id = $1', [res.body.post.id])).rows[0].title).toBe(title);
+  });
+
+  // REQ-4.1.3 / SEC-002 markup is stored and returned as typed; the page escapes it
+  it('keeps markup as plain text', async () => {
+    await create(valid({ title: '<script>alert(1)</script>', content: '<img src=x onerror=alert(1)>' }));
+
+    const res = await posts('General Discussion');
+
+    expect(res.body.posts[0]).toMatchObject({ title: '<script>alert(1)</script>', excerpt: '<img src=x onerror=alert(1)>' });
+  });
+
+  it('ignores fields it does not know, such as the author or the status', async () => {
+    const id = (await create(valid({ userId: '999', status: 'hidden', views: 50 }))).body.post.id;
+
+    const { rows } = await pool.query('SELECT user_id, status, views FROM forum_posts WHERE id = $1', [id]);
+
+    expect(rows[0]).toEqual({ user_id: userId, status: 'approved', views: 0 });
+  });
+
+  it('answers 400, not a server error, when the body is not JSON', async () => {
+    const res = await browser(app, token).post('/api/forum/posts').set('Content-Type', 'application/json').send('{not json');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Request body must be valid JSON.' });
   });
 });

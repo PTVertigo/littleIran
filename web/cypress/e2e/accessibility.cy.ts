@@ -173,6 +173,16 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     });
   });
 
+  it('new forum post page, empty and showing its errors, has no violations', () => {
+    logIn();
+    cy.visit('/forum/posts/new');
+    cy.get('select').should('be.visible');
+    expectNoViolations();
+    cy.contains('button', 'Publish post').click();
+    cy.get('.field__error').should('have.length', 3);
+    expectNoViolations();
+  });
+
   it('profile page has no violations', () => {
     logIn();
     cy.visit('/profile');

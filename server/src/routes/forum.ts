@@ -1,9 +1,34 @@
 import { Router } from 'express';
 import { pool } from '../db';
+import { validateForumPost } from '../forum-validation';
+import { requireAuth } from '../middleware/auth';
 import { FORUM_PAGE_SIZE, pageDetails, parsePage } from '../pagination';
 import { isRecordId } from '../validation';
 
 export const forumRouter = Router();
+
+// REQ-3.5 create a forum post. Members only. Posts are published at once, with the moderation status
+// "approved"; a flag or an administrator changes that later (REQ-3.8.9, REQ-3.8.10).
+forumRouter.post('/posts', requireAuth, async (req, res) => {
+  const { errors, value } = validateForumPost(req.body);
+  if (!value) {
+    res.status(400).json({ errors });
+    return;
+  }
+
+  // Only a forum category can hold a post; the database enforces it too
+  const { rows } = await pool.query<{ id: string }>(
+    `INSERT INTO forum_posts (user_id, category_id, title, content)
+     SELECT $1, c.id, $3, $4 FROM categories c WHERE c.id = $2 AND c.type = 'forum'
+     RETURNING id`,
+    [req.auth!.user.id, value.categoryId, value.title, value.content],
+  );
+  if (!rows[0]) {
+    res.status(400).json({ errors: { categoryId: 'Choose a category.' } });
+    return;
+  }
+  res.status(201).json({ post: { id: rows[0].id, title: value.title, categoryId: value.categoryId, status: 'approved' } });
+});
 
 // REQ-3.5.2 the posts of one forum category, newest first, open to everyone. REQ-3.7.9 shows 15 to a page.
 // A flagged post stays visible until an administrator acts on it; a hidden post (REQ-3.8.10) does not.
