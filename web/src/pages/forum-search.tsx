@@ -215,7 +215,9 @@ function PostList({ search, category, page, onPageChange, onClearSearch, onClear
         {posts.map((post) => (
           <li key={post.id}>
             <article className="card">
-              <h2>{post.title}</h2>
+              <h2>
+                <Link to={`/forum/posts/${post.id}`}>{post.title}</Link>
+              </h2>
               <p className="card__meta">
                 <Link to={`/forum/categories/${post.categoryId}`}>{post.category}</Link> · {post.authorName ?? 'Former member'} ·{' '}
                 <time dateTime={post.createdAt}>{formatDateTime(post.createdAt)}</time> · {post.views}{' '}

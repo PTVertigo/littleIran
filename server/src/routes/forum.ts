@@ -75,6 +75,35 @@ forumRouter.get('/posts', async (req, res) => {
   res.json({ posts: rows, ...pageDetails(paging.page, count.rows[0].total, FORUM_PAGE_SIZE) });
 });
 
+// One post in full, open to everyone. Every time it is opened its view count goes up by one. A hidden post, a
+// post that does not exist and an id that is not a number all answer 404. An author whose account was
+// deleted is shown without a name or a profile link (REQ-3.2.4).
+forumRouter.get('/posts/:id', async (req, res) => {
+  const id = String(req.params.id);
+  if (!isRecordId(id)) {
+    res.status(404).json({ error: 'Post not found.' });
+    return;
+  }
+
+  const { rows } = await pool.query(
+    `WITH opened AS (
+       UPDATE forum_posts SET views = views + 1
+       WHERE id = $1 AND status IN ('approved', 'flagged')
+       RETURNING id, title, content, status, views, created_at, edited_at, category_id, user_id
+     )
+     SELECT o.id, o.title, o.content, o.status, o.views, o.created_at AS "createdAt", o.edited_at AS "editedAt",
+            c.id AS "categoryId", c.name AS category,
+            u.id AS "authorId", u.first_name || ' ' || u.last_name AS "authorName"
+     FROM opened o JOIN categories c ON c.id = o.category_id LEFT JOIN users u ON u.id = o.user_id`,
+    [id],
+  );
+  if (!rows[0]) {
+    res.status(404).json({ error: 'Post not found.' });
+    return;
+  }
+  res.json({ post: rows[0] });
+});
+
 // REQ-3.5.2 the posts of one forum category, newest first, open to everyone. REQ-3.7.9 shows 15 to a page.
 // A flagged post stays visible until an administrator acts on it; a hidden post (REQ-3.8.10) does not.
 // An author whose account was deleted is shown without a name or a profile link (REQ-3.2.4).

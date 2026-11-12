@@ -15,6 +15,7 @@ import { ErrorPage } from './pages/error';
 import { ForumPage } from './pages/forum';
 import { ForumCategoryPage } from './pages/forum-category';
 import { ForumSearchPage } from './pages/forum-search';
+import { ForumPostPage } from './pages/forum-post';
 import { ForgotPasswordPage } from './pages/forgot-password';
 import { HomePage } from './pages/home';
 import { LoginPage } from './pages/login';
@@ -40,6 +41,7 @@ export const routes: RouteObject[] = [
           { path: 'events/:id', element: <EventDetailPage /> },
           { path: 'forum', element: <ForumPage /> },
           { path: 'forum/search', element: <ForumSearchPage /> },
+          { path: 'forum/posts/:id', element: <ForumPostPage /> },
           { path: 'forum/categories/:id', element: <ForumCategoryPage /> },
           {
             element: <GuestOnly />,

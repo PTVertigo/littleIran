@@ -585,3 +585,9 @@ main:focus {
 .error-page {
   max-width: 40rem;
 }
+
+/* A forum post is plain text: keep its line breaks and break very long words */
+.post-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

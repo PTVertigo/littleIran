@@ -138,7 +138,9 @@ function ForumCategoryView({ id }: { id: string }) {
               {posts.map((post) => (
                 <li key={post.id}>
                   <article className="card">
-                    <h2>{post.title}</h2>
+                    <h2>
+                      <Link to={`/forum/posts/${post.id}`}>{post.title}</Link>
+                    </h2>
                     <p className="card__meta">
                       {post.authorName ?? 'Former member'} · <time dateTime={post.createdAt}>{formatDateTime(post.createdAt)}</time> ·{' '}
                       {post.views} {post.views === 1 ? 'view' : 'views'}

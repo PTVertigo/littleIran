@@ -279,6 +279,77 @@ describe('GET /api/forum/posts', () => {
   });
 });
 
+// Open a single post
+describe('GET /api/forum/posts/:id', () => {
+  const open = (id: string) => request(app).get(`/api/forum/posts/${id}`);
+  const viewsOf = async (id: string) => (await pool.query('SELECT views FROM forum_posts WHERE id = $1', [id])).rows[0].views;
+
+  it('returns the whole post with its category and author', async () => {
+    const { rows: users } = await pool.query(
+      "INSERT INTO users (email, password_hash, first_name, last_name) VALUES ('a@test.com', 'x', 'Ava', 'Rahimi') RETURNING id",
+    );
+    const content = 'x'.repeat(500);
+    const id = await addPost({ title: 'Tea shops', content, user_id: users[0].id }, 'Q&A');
+
+    const res = await open(id);
+
+    expect(res.status).toBe(200);
+    expect(res.body.post).toEqual({
+      id,
+      title: 'Tea shops',
+      content,
+      status: 'approved',
+      views: 1,
+      createdAt: expect.any(String),
+      editedAt: null,
+      categoryId: expect.any(String),
+      category: 'Q&A',
+      authorId: users[0].id,
+      authorName: 'Ava Rahimi',
+    });
+  });
+
+  it('counts every opening as a view', async () => {
+    const id = await addPost();
+
+    await open(id);
+    await open(id);
+    const third = await open(id);
+
+    expect(third.body.post.views).toBe(3);
+    expect(await viewsOf(id)).toBe(3);
+  });
+
+  it('shows a post whose author is gone without a name', async () => {
+    const id = await addPost();
+
+    expect((await open(id)).body.post).toMatchObject({ authorId: null, authorName: null });
+  });
+
+  it('still shows a flagged post', async () => {
+    const id = await addPost({ status: 'flagged' });
+
+    expect((await open(id)).status).toBe(200);
+  });
+
+  it('answers 404 for a hidden post, without counting a view', async () => {
+    const id = await addPost({ status: 'hidden' });
+
+    const res = await open(id);
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Post not found.' });
+    expect(await viewsOf(id)).toBe(0);
+  });
+
+  it.each(['999999', 'abc', '0', '-1', '1.5', "1;DROP TABLE forum_posts"])('answers 404 for the id %p', async (id) => {
+    const res = await open(encodeURIComponent(id));
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Post not found.' });
+  });
+});
+
 // REQ-3.5 / FE-005 create a forum post
 describe('POST /api/forum/posts', () => {
   let token: string;

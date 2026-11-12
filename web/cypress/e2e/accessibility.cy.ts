@@ -183,6 +183,14 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     expectNoViolations();
   });
 
+  it('forum post page has no violations', () => {
+    cy.request('/api/forum/posts').its('body.posts.0.id').then((id) => {
+      cy.visit(`/forum/posts/${id}`);
+      cy.get('article h1').should('be.visible');
+      expectNoViolations();
+    });
+  });
+
   it('new forum post page, empty and showing its errors, has no violations', () => {
     logIn();
     cy.visit('/forum/posts/new');
