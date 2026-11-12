@@ -26,6 +26,9 @@ export function ForumPage() {
       <p className="page-actions">
         <Link to="/forum/posts/new" className="button">
           New post
+        </Link>{' '}
+        <Link to="/forum/search" className="button">
+          Search posts
         </Link>
       </p>
       {error ? (

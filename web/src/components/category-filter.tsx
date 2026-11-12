@@ -10,7 +10,7 @@ export function CategoryFilter({
   selected,
   onSelect,
 }: {
-  type: 'business' | 'event';
+  type: 'business' | 'event' | 'forum';
   selected: string;
   onSelect: (name: string) => void;
 }) {

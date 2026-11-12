@@ -192,6 +192,93 @@ describe('Forum post pagination', () => {
   });
 });
 
+// REQ-3.7.3 search and REQ-3.7.6 filter by category, across all forum categories
+describe('GET /api/forum/posts', () => {
+  const search = (query: string) => request(app).get(`/api/forum/posts${query}`);
+
+  beforeEach(async () => {
+    await addPost({ title: 'Best saffron tea', content: 'Where to buy it?' }, 'General Discussion', 3);
+    await addPost({ title: 'Nowruz plans', content: 'Anyone hosting a haft-sin table with saffron sweets?' }, 'Event Planning', 2);
+    await addPost({ title: 'Calligraphy books', content: 'Recommendations please.' }, 'Cultural Exchange', 1);
+  });
+
+  it('lists every post newest first, with the category of each', async () => {
+    const res = await search('');
+
+    expect(res.status).toBe(200);
+    expect(titles(res)).toEqual(['Calligraphy books', 'Nowruz plans', 'Best saffron tea']);
+    expect(res.body.posts[0]).toMatchObject({ category: 'Cultural Exchange', categoryId: expect.any(String), excerpt: 'Recommendations please.' });
+    expect(res.body).toMatchObject({ page: 1, pageSize: 15, total: 3, totalPages: 1 });
+  });
+
+  it('finds words in the title or in the content, in any category', async () => {
+    const res = await search('?search=saffron');
+
+    expect(titles(res)).toEqual(['Nowruz plans', 'Best saffron tea']);
+    expect(res.body.posts.map((p: { category: string }) => p.category)).toEqual(['Event Planning', 'General Discussion']);
+  });
+
+  it('ignores case and needs every word', async () => {
+    expect(titles(await search('?search=SAFFRON%20tea'))).toEqual(['Best saffron tea']);
+    expect(titles(await search('?search=saffron%20calligraphy'))).toEqual([]);
+  });
+
+  it('filters by category name, ignoring case', async () => {
+    expect(titles(await search('?category=event%20planning'))).toEqual(['Nowruz plans']);
+    expect(titles(await search('?category=Q%26A'))).toEqual([]);
+  });
+
+  it('combines a search with a category', async () => {
+    expect(titles(await search('?search=saffron&category=General%20Discussion'))).toEqual(['Best saffron tea']);
+  });
+
+  it('never returns hidden posts, but keeps flagged ones', async () => {
+    await addPost({ title: 'Hidden saffron', status: 'hidden' });
+    await addPost({ title: 'Flagged saffron', status: 'flagged' });
+
+    expect(titles(await search('?search=saffron'))).toEqual(['Flagged saffron', 'Nowruz plans', 'Best saffron tea']);
+  });
+
+  it('treats % and _ as plain characters', async () => {
+    await addPost({ title: '100% sure' });
+
+    expect(titles(await search('?search=100%25'))).toEqual(['100% sure']);
+    expect(titles(await search('?search=%25'))).toEqual(['100% sure']);
+    expect(titles(await search('?search=_'))).toEqual([]);
+  });
+
+  // API-004 style
+  it("answers 200 and finds nothing for an injection attempt, leaving the table intact", async () => {
+    const res = await search(`?search=${encodeURIComponent("'; DROP TABLE forum_posts;--")}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.posts).toEqual([]);
+    expect(res.body.total).toBe(0);
+    expect((await pool.query('SELECT count(*)::int AS n FROM forum_posts')).rows[0].n).toBe(3);
+  });
+
+  it('pages the results 15 at a time', async () => {
+    for (let i = 1; i <= 15; i++) await addPost({ title: `Extra ${i}` }, 'Q&A', 10 + i);
+
+    const second = await search('?page=2');
+
+    expect(second.body).toMatchObject({ page: 2, total: 18, totalPages: 2 });
+    expect(second.body.posts).toHaveLength(3);
+  });
+
+  it.each([
+    ['?search=a&search=b', 'Search for a single phrase.'],
+    [`?search=${'x'.repeat(101)}`, 'Search for at most 100 characters.'],
+    ['?category=a&category=b', 'Choose a single category.'],
+    ['?page=0', 'Choose a page number from 1 upward.'],
+  ])('refuses %p', async (query, error) => {
+    const res = await search(query);
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error });
+  });
+});
+
 // REQ-3.5 / FE-005 create a forum post
 describe('POST /api/forum/posts', () => {
   let token: string;

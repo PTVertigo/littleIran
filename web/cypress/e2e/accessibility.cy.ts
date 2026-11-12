@@ -173,6 +173,16 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     });
   });
 
+  it('forum search, with results and with none, has no violations', () => {
+    cy.visit('/forum/search?category=General%20Discussion');
+    cy.get('.chip[aria-pressed="true"]').should('contain', 'General Discussion');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+    cy.visit('/forum/search?search=zzzzzz');
+    cy.contains('No posts match');
+    expectNoViolations();
+  });
+
   it('new forum post page, empty and showing its errors, has no violations', () => {
     logIn();
     cy.visit('/forum/posts/new');
