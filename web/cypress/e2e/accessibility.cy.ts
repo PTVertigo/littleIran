@@ -222,6 +222,14 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     expectNoViolations();
   });
 
+  it('my submissions page has no violations', () => {
+    logIn();
+    cy.visit('/submissions');
+    cy.contains('h1', 'My submissions');
+    cy.get('main').should('not.contain', 'Loading');
+    expectNoViolations();
+  });
+
   it('new forum post page, empty and showing its errors, has no violations', () => {
     logIn();
     cy.visit('/forum/posts/new');

@@ -8,6 +8,7 @@ import { businessesRouter } from './routes/businesses';
 import { eventsRouter } from './routes/events';
 import { forumRouter } from './routes/forum';
 import { adminRouter } from './routes/admin';
+import { submissionsRouter } from './routes/submissions';
 import { categoriesRouter } from './routes/categories';
 import { passwordResetRouter } from './routes/password-reset';
 import { usersRouter } from './routes/users';
@@ -55,6 +56,7 @@ export function createApp({ webDist }: { webDist?: string } = {}) {
   app.use('/api/events', eventsRouter);
   app.use('/api/forum', forumRouter);
   app.use('/api/admin', adminRouter);
+  app.use('/api/submissions', submissionsRouter);
   app.use('/api/categories', categoriesRouter);
   app.use('/api/users', usersRouter);
   app.use('/api/auth', authRouter);

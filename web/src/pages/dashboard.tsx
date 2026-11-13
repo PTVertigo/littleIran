@@ -12,6 +12,9 @@ export function DashboardPage() {
       <h1>Welcome, {state.user.firstName}</h1>
       <p className="muted">You are logged in as {state.user.email}.</p>
       <p>
+        <Link to="/submissions">My submissions</Link>
+      </p>
+      <p>
         <Link to="/change-password">Change password</Link>
       </p>
     </section>

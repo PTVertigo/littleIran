@@ -3,6 +3,7 @@ import type { RouteObject } from 'react-router';
 import { Layout } from './components/layout';
 import { GuestOnly, RequireAdmin, RequireAuth } from './components/route-guards';
 import { AdminPage } from './pages/admin';
+import { SubmissionsPage } from './pages/submissions';
 import { BusinessDetailPage } from './pages/business-detail';
 import { BusinessesPage } from './pages/businesses';
 import { EventDetailPage } from './pages/event-detail';
@@ -58,6 +59,7 @@ export const routes: RouteObject[] = [
             element: <RequireAuth />,
             children: [
               { path: 'dashboard', element: <DashboardPage /> },
+              { path: 'submissions', element: <SubmissionsPage /> },
               {
                 element: <RequireAdmin />,
                 children: [{ path: 'admin', element: <AdminPage /> }],

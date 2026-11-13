@@ -105,6 +105,49 @@ eventsRouter.post('/', requireAuth, async (req, res) => {
   res.status(201).json({ event: { id: rows[0].id, title: value.title, status: 'pending' } });
 });
 
+// REQ-3.6.3 resubmit a rejected event with improvements. Only its owner can, and only while it is rejected;
+// anything else answers 404 like an event that does not exist. It goes back to pending with no rejection reason.
+eventsRouter.put('/:id', requireAuth, async (req, res) => {
+  const id = String(req.params.id);
+  const owned = isRecordId(id)
+    ? await pool.query("SELECT 1 FROM events WHERE id = $1 AND user_id = $2 AND status = 'rejected'", [id, req.auth!.user.id])
+    : { rowCount: 0 };
+  if (!owned.rowCount) {
+    res.status(404).json({ error: 'Submission not found.' });
+    return;
+  }
+
+  const { errors, value } = validateEvent(req.body);
+  if (!value) {
+    res.status(400).json({ errors });
+    return;
+  }
+  const category = await pool.query("SELECT 1 FROM categories WHERE id = $1 AND type = 'event'", [value.categoryId]);
+  if (!category.rowCount) {
+    res.status(400).json({ errors: { categoryId: 'Choose a category.' } });
+    return;
+  }
+
+  const { rows } = await pool.query<{ id: string }>(
+    `WITH times AS (
+       SELECT ($2::date + $3::time) AT TIME ZONE 'America/Toronto' AS starts_at,
+              CASE WHEN $4::time IS NULL THEN NULL ELSE ($2::date + $4::time) AT TIME ZONE 'America/Toronto' END AS ends_at
+     )
+     UPDATE events SET category_id = $5, title = $6, description = $7, location = $8, organizer_name = $9, organizer_contact = $10,
+            starts_at = times.starts_at, ends_at = times.ends_at, status = 'pending', rejection_reason = NULL
+     FROM times
+     WHERE events.id = $1 AND events.status = 'rejected'
+       AND times.starts_at > now() AND times.starts_at < now() + interval '3 years'
+     RETURNING events.id`,
+    [id, value.date, value.startTime, value.endTime, value.categoryId, value.title, value.description, value.location, value.organizerName, value.organizerContact],
+  );
+  if (!rows[0]) {
+    res.status(400).json({ errors: { date: 'Choose a date and time that have not passed yet, within the next three years.' } });
+    return;
+  }
+  res.json({ event: { id, title: value.title, status: 'pending' } });
+});
+
 // REQ-3.4.2 one event in full, with its organizer. A pending or rejected event answers "not found",
 // exactly like an id that does not exist, so nobody can tell that an unpublished event is there.
 eventsRouter.get('/:id', async (req, res) => {
