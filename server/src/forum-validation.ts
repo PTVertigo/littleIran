@@ -30,3 +30,35 @@ export function validateForumPost(body: unknown): { errors: Record<string, strin
   if (Object.keys(errors).length > 0) return { errors };
   return { errors, value: { title, categoryId, content } };
 }
+
+export const COMMENT_MAX = 1000;
+export const FLAG_REASON_MAX = 500;
+
+// A comment, or a reply when parentId is given. Kept as typed, escaped where it is shown (REQ-4.1.3).
+export function validateComment(body: unknown): { errors: Record<string, string>; value?: { content: string; parentId: string | null } } {
+  const input = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
+  const errors: Record<string, string> = {};
+
+  const content = text(input.content);
+  if (!content) errors.content = 'Write your comment.';
+  else if (content.length > COMMENT_MAX) errors.content = `The comment can be at most ${COMMENT_MAX} characters.`;
+  else if (content.includes('\0')) errors.content = 'The comment contains characters that are not allowed.';
+
+  let parentId: string | null = null;
+  if (input.parentId !== undefined && input.parentId !== null) {
+    if (typeof input.parentId === 'string' && isRecordId(input.parentId)) parentId = input.parentId;
+    else errors.parentId = 'Choose a comment to reply to.';
+  }
+
+  if (Object.keys(errors).length > 0) return { errors };
+  return { errors, value: { content, parentId } };
+}
+
+// The reason is optional.
+export function validateFlag(body: unknown): { errors: Record<string, string>; value?: { reason: string | null } } {
+  const input = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
+  const reason = text(input.reason);
+  if (reason.length > FLAG_REASON_MAX) return { errors: { reason: `The reason can be at most ${FLAG_REASON_MAX} characters.` } };
+  if (reason.includes('\0')) return { errors: { reason: 'The reason contains characters that are not allowed.' } };
+  return { errors: {}, value: { reason: reason || null } };
+}

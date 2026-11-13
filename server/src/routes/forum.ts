@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { pool } from '../db';
-import { validateForumPost } from '../forum-validation';
+import { validateComment, validateFlag, validateForumPost } from '../forum-validation';
 import { requireAuth } from '../middleware/auth';
 import { FORUM_PAGE_SIZE, pageDetails, parsePage } from '../pagination';
 import { escapeLike, parseCategoryFilter, parseSearch } from '../search';
@@ -102,6 +102,72 @@ forumRouter.get('/posts/:id', async (req, res) => {
     return;
   }
   res.json({ post: rows[0] });
+});
+
+// A post can be reached by comments and flags only while it is visible
+const visiblePost = async (id: string) =>
+  isRecordId(id) && (await pool.query("SELECT 1 FROM forum_posts WHERE id = $1 AND status IN ('approved', 'flagged')", [id])).rowCount === 1;
+
+// Comments and replies of a post, oldest first, open to everyone. Replies carry the id of their comment.
+forumRouter.get('/posts/:id/comments', async (req, res) => {
+  const id = String(req.params.id);
+  if (!(await visiblePost(id))) {
+    res.status(404).json({ error: 'Post not found.' });
+    return;
+  }
+  const { rows } = await pool.query(
+    `SELECT c.id, c.parent_id AS "parentId", c.content, c.created_at AS "createdAt",
+            u.id AS "authorId", u.first_name || ' ' || u.last_name AS "authorName"
+     FROM forum_comments c LEFT JOIN users u ON u.id = c.user_id
+     WHERE c.post_id = $1 ORDER BY c.created_at, c.id`,
+    [id],
+  );
+  res.json({ comments: rows });
+});
+
+// Comment on a post, or reply to one of its comments. Members only. A reply goes under a top-level comment of
+// the same post, so threads stay one level deep.
+forumRouter.post('/posts/:id/comments', requireAuth, async (req, res) => {
+  const id = String(req.params.id);
+  if (!(await visiblePost(id))) {
+    res.status(404).json({ error: 'Post not found.' });
+    return;
+  }
+  const { errors, value } = validateComment(req.body);
+  if (!value) {
+    res.status(400).json({ errors });
+    return;
+  }
+  if (value.parentId) {
+    const parent = await pool.query('SELECT 1 FROM forum_comments WHERE id = $1 AND post_id = $2 AND parent_id IS NULL', [value.parentId, id]);
+    if (!parent.rowCount) {
+      res.status(400).json({ errors: { parentId: 'Choose a comment to reply to.' } });
+      return;
+    }
+  }
+  const { rows } = await pool.query(
+    'INSERT INTO forum_comments (post_id, parent_id, user_id, content) VALUES ($1, $2, $3, $4) RETURNING id',
+    [id, value.parentId, req.auth!.user.id, value.content],
+  );
+  res.status(201).json({ comment: { id: rows[0].id, parentId: value.parentId, content: value.content } });
+});
+
+// Report a post to the administrators. Members only. The post is marked flagged until an administrator acts
+// (REQ-3.8.9); flagging the same post again is harmless.
+forumRouter.post('/posts/:id/flag', requireAuth, async (req, res) => {
+  const id = String(req.params.id);
+  if (!(await visiblePost(id))) {
+    res.status(404).json({ error: 'Post not found.' });
+    return;
+  }
+  const { errors, value } = validateFlag(req.body);
+  if (!value) {
+    res.status(400).json({ errors });
+    return;
+  }
+  await pool.query('INSERT INTO forum_flags (post_id, user_id, reason) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [id, req.auth!.user.id, value.reason]);
+  await pool.query("UPDATE forum_posts SET status = 'flagged' WHERE id = $1 AND status = 'approved'", [id]);
+  res.status(201).json({ flagged: true });
 });
 
 // REQ-3.5.2 the posts of one forum category, newest first, open to everyone. REQ-3.7.9 shows 15 to a page.

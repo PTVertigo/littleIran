@@ -16,11 +16,12 @@ const post = {
   authorId: '1',
   authorName: 'Ava Rahimi',
 };
+const noComments = { status: 200, body: { comments: [] } };
 const found = (overrides = {}) => ({ status: 200, body: { post: { ...post, ...overrides } } });
 
 describe('Forum post page', () => {
   it('shows the whole post with its category, author, date and views', async () => {
-    const fetchMock = mockFetch(signedOut, found());
+    const fetchMock = mockFetch(signedOut, found(), noComments);
     renderApp('/forum/posts/8');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Best tea shops in the GTA' })).toBeInTheDocument();
@@ -35,7 +36,7 @@ describe('Forum post page', () => {
   });
 
   it('shows markup in the post as plain text', async () => {
-    mockFetch(signedOut, found({ content: '<img src=x onerror="alert(1)">' }));
+    mockFetch(signedOut, found({ content: '<img src=x onerror="alert(1)">' }), noComments);
     renderApp('/forum/posts/8');
 
     expect(await screen.findByText('<img src=x onerror="alert(1)">')).toBeInTheDocument();
@@ -43,7 +44,7 @@ describe('Forum post page', () => {
   });
 
   it('says when the post was edited, and names a former member', async () => {
-    mockFetch(signedOut, found({ editedAt: '2026-10-21T15:00:00.000Z', authorId: null, authorName: null, views: 1 }));
+    mockFetch(signedOut, found({ editedAt: '2026-10-21T15:00:00.000Z', authorId: null, authorName: null, views: 1 }), noComments);
     renderApp('/forum/posts/8');
 
     const article = await screen.findByRole('article');
@@ -68,7 +69,7 @@ describe('Forum post page', () => {
   });
 
   it('is opened from the title of a post in its category', async () => {
-    mockFetch(signedOut, { status: 200, body: forumPostPage([{ id: '8', title: post.title, excerpt: 'x', createdAt: post.createdAt, views: 4, authorId: null, authorName: null }]) }, found());
+    mockFetch(signedOut, { status: 200, body: forumPostPage([{ id: '8', title: post.title, excerpt: 'x', createdAt: post.createdAt, views: 4, authorId: null, authorName: null }]) }, found(), noComments);
     renderApp('/forum/categories/14');
 
     await userEvent.click(await screen.findByRole('link', { name: post.title }));

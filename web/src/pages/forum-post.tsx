@@ -5,6 +5,7 @@ import { ErrorBanner } from '../components/error-banner';
 import { Spinner } from '../components/spinner';
 import { ApiError, apiRequest } from '../lib/api';
 import { formatDateTime } from '../lib/format';
+import { Comments, FlagPost } from './forum-comments';
 
 type Post = {
   id: string;
@@ -90,6 +91,8 @@ function ForumPostView({ id }: { id: string }) {
         </p>
         <p className="post-body">{post.content}</p>
       </article>
+      <FlagPost postId={post.id} />
+      <Comments postId={post.id} />
     </section>
   );
 }

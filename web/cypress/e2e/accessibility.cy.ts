@@ -191,6 +191,24 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     });
   });
 
+  it('forum post with a comment and the reply form has no violations', () => {
+    logIn();
+    cy.request('/api/categories?type=forum').its('body.categories').then((categories) => {
+      const category = categories.find((c: { name: string }) => c.name === 'Cultural Exchange');
+      cy.getCookie('csrf_token').then((csrf) => {
+        const headers = { 'X-CSRF-Token': csrf?.value ?? '' };
+        cy.request({ method: 'POST', url: '/api/forum/posts', headers, body: { title: 'Axe target', categoryId: category.id, content: 'Text.' } })
+          .its('body.post.id').then((id) => {
+            cy.request({ method: 'POST', url: `/api/forum/posts/${id}/comments`, headers, body: { content: 'Axe check' } });
+            cy.visit(`/forum/posts/${id}`);
+          });
+      });
+    });
+    cy.contains('article', 'Axe check');
+    cy.contains('button', 'Reply').click();
+    expectNoViolations();
+  });
+
   it('new forum post page, empty and showing its errors, has no violations', () => {
     logIn();
     cy.visit('/forum/posts/new');

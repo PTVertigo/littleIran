@@ -591,3 +591,17 @@ main:focus {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* Comments: replies are indented under their comment */
+.comment-list {
+  list-style: none;
+  padding: 0;
+}
+.comment-list > li {
+  margin-block: 1rem;
+}
+.comment-list--replies {
+  margin-inline-start: 1.5rem;
+  padding-inline-start: 1rem;
+  border-inline-start: 2px solid var(--border, #ccc);
+}
