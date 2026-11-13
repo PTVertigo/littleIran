@@ -209,6 +209,19 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     expectNoViolations();
   });
 
+  it('admin page, with its rejection form open, has no violations', () => {
+    cy.visit('/login');
+    cy.get('input[type="email"]').type('admin@test.com');
+    cy.get('input[type="password"]').type('Admin123@{enter}');
+    cy.location('pathname').should('eq', '/dashboard');
+    cy.visit('/admin');
+    cy.contains('h1', 'Administration');
+    cy.contains('h2', 'Pending submissions (');
+    expectNoViolations();
+    cy.get('article').first().contains('button', 'Reject').click();
+    expectNoViolations();
+  });
+
   it('new forum post page, empty and showing its errors, has no violations', () => {
     logIn();
     cy.visit('/forum/posts/new');

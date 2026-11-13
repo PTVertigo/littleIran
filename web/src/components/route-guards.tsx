@@ -22,3 +22,22 @@ export function GuestOnly() {
   if (state.status === 'signedIn') return <Navigate to={AFTER_LOGIN_PATH} replace />;
   return <Outlet />;
 }
+
+// REQ-3.8 administrator pages: logged-out visitors log in; a member who is not an administrator is told so
+export function RequireAdmin() {
+  const { state } = useSession();
+  const location = useLocation();
+
+  if (state.status !== 'signedIn') {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+  if (state.user.role !== 'admin') {
+    return (
+      <section>
+        <h1>Not allowed</h1>
+        <p>This page is only for administrators.</p>
+      </section>
+    );
+  }
+  return <Outlet />;
+}

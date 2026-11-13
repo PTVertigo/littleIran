@@ -1,7 +1,8 @@
 import type { RouteObject } from 'react-router';
 
 import { Layout } from './components/layout';
-import { GuestOnly, RequireAuth } from './components/route-guards';
+import { GuestOnly, RequireAdmin, RequireAuth } from './components/route-guards';
+import { AdminPage } from './pages/admin';
 import { BusinessDetailPage } from './pages/business-detail';
 import { BusinessesPage } from './pages/businesses';
 import { EventDetailPage } from './pages/event-detail';
@@ -57,6 +58,10 @@ export const routes: RouteObject[] = [
             element: <RequireAuth />,
             children: [
               { path: 'dashboard', element: <DashboardPage /> },
+              {
+                element: <RequireAdmin />,
+                children: [{ path: 'admin', element: <AdminPage /> }],
+              },
               // Static, so it wins over businesses/:id; only a logged-in member can submit a listing
               { path: 'businesses/new', element: <NewBusinessPage /> },
               // Static, so it wins over events/:id; only a logged-in member can submit an event

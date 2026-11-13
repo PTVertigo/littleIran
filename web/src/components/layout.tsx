@@ -59,6 +59,11 @@ export function Layout() {
                   <li>
                     <NavLink to="/dashboard">Dashboard</NavLink>
                   </li>
+                  {state.user.role === 'admin' && (
+                    <li>
+                      <NavLink to="/admin">Admin</NavLink>
+                    </li>
+                  )}
                   <li>
                     <NavLink to="/profile">Profile</NavLink>
                   </li>
