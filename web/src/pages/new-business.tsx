@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 
 import { ErrorBanner } from '../components/error-banner';
 import { SelectField } from '../components/select-field';
@@ -25,11 +25,18 @@ const emptyForm = (): BusinessForm => ({
   phone: '',
   email: '',
   website: '',
-  hours: DAY_NAMES.map(() => ({ open: false, opens: '09:00', closes: '17:00' })),
+  hours: DAY_NAMES.map(() => ({
+    open: false,
+    opens: '09:00',
+    closes: '17:00',
+  })),
 });
 
 // Screen "add listing". REQ-3.3 a member submits a business, which waits for approval before it is public
 export function NewBusinessPage() {
+  // REQ-3.6.3 ?resubmit=<id> opens a rejected listing of the member's own, filled in, to improve and send again
+  const resubmitId = useSearchParams()[0].get('resubmit') ?? '';
+  const [reason, setReason] = useState('');
   const [categories, setCategories] = useState<Category[] | null>(null);
   const [loadError, setLoadError] = useState('');
   const [values, setValues] = useState<BusinessForm>(emptyForm);
@@ -44,6 +51,31 @@ export function NewBusinessPage() {
       .catch((err) => setLoadError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.'));
   }, []);
 
+  useEffect(() => {
+    if (!resubmitId) return;
+    type Previous = Omit<BusinessForm, 'hours'> & {
+      rejectionReason: string;
+      hours: { day: number; opens: string; closes: string }[];
+    };
+    apiRequest<{ business: Previous }>(`/api/submissions/businesses/${encodeURIComponent(resubmitId)}`)
+      .then(({ business }) => {
+        const { rejectionReason, hours, ...form } = business;
+        const week = emptyForm().hours;
+        for (const h of hours) week[h.day - 1] = { open: true, opens: h.opens, closes: h.closes };
+        setValues({ ...emptyForm(), ...form, hours: week });
+        setReason(rejectionReason);
+      })
+      .catch((err) =>
+        setLoadError(
+          err instanceof ApiError && err.status === 404
+            ? 'This listing cannot be resubmitted. Only your own rejected listings can.'
+            : err instanceof ApiError
+              ? err.message
+              : 'Something went wrong. Please try again.',
+        ),
+      );
+  }, [resubmitId]);
+
   function bind(field: TextFieldName) {
     return {
       value: values[field],
@@ -54,7 +86,10 @@ export function NewBusinessPage() {
   }
 
   function setDay(index: number, change: Partial<DayHours>) {
-    setValues({ ...values, hours: values.hours.map((day, i) => (i === index ? { ...day, ...change } : day)) });
+    setValues({
+      ...values,
+      hours: values.hours.map((day, i) => (i === index ? { ...day, ...change } : day)),
+    });
   }
 
   async function submit(event: FormEvent) {
@@ -71,8 +106,10 @@ export function NewBusinessPage() {
 
     setLoading(true);
     try {
-      const { business } = await apiRequest<{ business: { id: string; name: string } }>('/api/businesses', {
-        method: 'POST',
+      const { business } = await apiRequest<{
+        business: { id: string; name: string };
+      }>(resubmitId ? `/api/businesses/${encodeURIComponent(resubmitId)}` : '/api/businesses', {
+        method: resubmitId ? 'PUT' : 'POST',
         body: {
           name: values.name.trim(),
           categoryId: values.categoryId,
@@ -101,35 +138,48 @@ export function NewBusinessPage() {
   if (submitted !== null) {
     return (
       <section className="form-page">
-        <h1>Business submitted</h1>
+        <h1>{resubmitId ? 'Business resubmitted' : 'Business submitted'}</h1>
         <p role="status" className="success-banner">
-          Thank you. {submitted} has been submitted. An administrator will review it, and it will appear in the directory once it is approved.
+          Thank you. {submitted} has been {resubmitId ? 'resubmitted' : 'submitted'}. An administrator will review it, and it will appear in
+          the directory once it is approved.
+        </p>
+        <p className="form-footer">
+          <Link to="/submissions">See your submissions</Link>
         </p>
         <p className="form-footer">
           <Link to="/businesses">Back to the business directory</Link>
         </p>
-        <p className="form-footer">
-          <button
-            type="button"
-            className="link-button"
-            onClick={() => {
-              setValues(emptyForm());
-              setFieldErrors({});
-              setSubmitted(null);
-            }}>
-            Add another business
-          </button>
-        </p>
+        {!resubmitId && (
+          <p className="form-footer">
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => {
+                setValues(emptyForm());
+                setFieldErrors({});
+                setSubmitted(null);
+              }}>
+              Add another business
+            </button>
+          </p>
+        )}
       </section>
     );
   }
 
   return (
     <section className="form-page">
-      <h1>Add a business</h1>
+      <h1>{resubmitId ? 'Resubmit your business' : 'Add a business'}</h1>
       <p className="muted">
-        Tell the community about an Iranian-owned business. An administrator reviews every listing before it is published.
+        {resubmitId
+          ? 'Improve the listing and send it again. An administrator will review it again.'
+          : 'Tell the community about an Iranian-owned business. An administrator reviews every listing before it is published.'}
       </p>
+      {reason && (
+        <p role="note" className="error-banner">
+          Reason it was rejected: {reason}
+        </p>
+      )}
 
       {loadError && <ErrorBanner message={loadError} />}
       {!loadError && !categories && <Spinner label="Loading the form" />}
@@ -153,7 +203,7 @@ export function NewBusinessPage() {
           <TextField label="Website (optional)" type="url" hint="Starts with https://" {...bind('website')} />
           <HoursField hours={values.hours} error={fieldErrors.hours} onChange={setDay} />
           <button type="submit" className="button" disabled={loading}>
-            {loading ? 'Submitting…' : 'Submit for review'}
+            {loading ? 'Submitting…' : resubmitId ? 'Resubmit for review' : 'Submit for review'}
           </button>
         </form>
       )}

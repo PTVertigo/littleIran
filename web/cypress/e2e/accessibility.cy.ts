@@ -34,6 +34,7 @@ const publicPages = [
   ['home', '/'],
   ['business directory', '/businesses'],
   ['events', '/events'],
+  ['forum', '/forum'],
   ['login', '/login'],
   ['register', '/register'],
   ['forgot password', '/forgot-password'],
@@ -159,6 +160,100 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
       cy.contains('h2', 'Organizer');
       expectNoViolations();
     });
+  });
+
+  it('forum category page, and its second page, have no violations', () => {
+    cy.request('/api/categories?type=forum').its('body.categories.0.id').then((id) => {
+      cy.visit(`/forum/categories/${id}`);
+      cy.get('article').should('have.length.at.least', 1);
+      expectNoViolations();
+      cy.visit(`/forum/categories/${id}?page=2`);
+      cy.get('nav[aria-label="Forum post pages"] [aria-current="page"]').should('have.text', '2');
+      expectNoViolations();
+    });
+  });
+
+  it('forum search, with results and with none, has no violations', () => {
+    cy.visit('/forum/search?category=General%20Discussion');
+    cy.get('.chip[aria-pressed="true"]').should('contain', 'General Discussion');
+    cy.get('article').should('have.length.at.least', 1);
+    expectNoViolations();
+    cy.visit('/forum/search?search=zzzzzz');
+    cy.contains('No posts match');
+    expectNoViolations();
+  });
+
+  it('forum post page has no violations', () => {
+    cy.request('/api/forum/posts').its('body.posts.0.id').then((id) => {
+      cy.visit(`/forum/posts/${id}`);
+      cy.get('article h1').should('be.visible');
+      expectNoViolations();
+    });
+  });
+
+  it('forum post with a comment and the reply form has no violations', () => {
+    logIn();
+    cy.request('/api/categories?type=forum').its('body.categories').then((categories) => {
+      const category = categories.find((c: { name: string }) => c.name === 'Cultural Exchange');
+      cy.getCookie('csrf_token').then((csrf) => {
+        const headers = { 'X-CSRF-Token': csrf?.value ?? '' };
+        cy.request({ method: 'POST', url: '/api/forum/posts', headers, body: { title: 'Axe target', categoryId: category.id, content: 'Text.' } })
+          .its('body.post.id').then((id) => {
+            cy.request({ method: 'POST', url: `/api/forum/posts/${id}/comments`, headers, body: { content: 'Axe check' } });
+            cy.visit(`/forum/posts/${id}`);
+          });
+      });
+    });
+    cy.contains('article', 'Axe check');
+    cy.contains('button', 'Reply').click();
+    expectNoViolations();
+  });
+
+  it('admin page, with its rejection form open, has no violations', () => {
+    cy.visit('/login');
+    cy.get('input[type="email"]').type('admin@test.com');
+    cy.get('input[type="password"]').type('Admin123@{enter}');
+    cy.location('pathname').should('eq', '/dashboard');
+
+    // A fresh database has nothing pending, so submit an event for this test to open the form on
+    const title = `Axe Review ${Date.now()}`;
+    cy.request('/api/categories?type=event').its('body.categories.0.id').then((categoryId) => {
+      cy.getCookie('csrf_token').then((csrf) => {
+        const date = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+        cy.request({
+          method: 'POST',
+          url: '/api/events',
+          headers: { 'X-CSRF-Token': csrf?.value ?? '' },
+          body: { title, categoryId, description: 'Awaiting review.', location: 'Toronto', date, startTime: '19:00', endTime: '21:00', organizerName: 'Admin', organizerContact: 'host@example.com' },
+        });
+      });
+    });
+
+    cy.visit('/admin');
+    cy.contains('h1', 'Administration');
+    cy.contains('article', title).should('be.visible');
+    expectNoViolations();
+    cy.contains('button', `Reject ${title}`).click();
+    cy.contains('article', title).find('textarea').should('be.visible');
+    expectNoViolations();
+  });
+
+  it('my submissions page has no violations', () => {
+    logIn();
+    cy.visit('/submissions');
+    cy.contains('h1', 'My submissions');
+    cy.get('main').should('not.contain', 'Loading');
+    expectNoViolations();
+  });
+
+  it('new forum post page, empty and showing its errors, has no violations', () => {
+    logIn();
+    cy.visit('/forum/posts/new');
+    cy.get('select').should('be.visible');
+    expectNoViolations();
+    cy.contains('button', 'Publish post').click();
+    cy.get('.field__error').should('have.length', 3);
+    expectNoViolations();
   });
 
   it('profile page has no violations', () => {

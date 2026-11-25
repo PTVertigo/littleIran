@@ -104,6 +104,60 @@ businessesRouter.post('/', requireAuth, async (req, res) => {
   }
 });
 
+// REQ-3.6.3 resubmit a rejected listing with improvements. Only its owner can, and only while it is rejected;
+// anything else answers 404 like a listing that does not exist. It goes back to pending with no rejection reason.
+businessesRouter.put('/:id', requireAuth, async (req, res) => {
+  const id = String(req.params.id);
+  const owned = isRecordId(id)
+    ? await pool.query("SELECT 1 FROM businesses WHERE id = $1 AND user_id = $2 AND status = 'rejected'", [id, req.auth!.user.id])
+    : { rowCount: 0 };
+  if (!owned.rowCount) {
+    res.status(404).json({ error: 'Submission not found.' });
+    return;
+  }
+
+  const { errors, value } = validateBusiness(req.body);
+  if (!value) {
+    res.status(400).json({ errors });
+    return;
+  }
+  const category = await pool.query("SELECT 1 FROM categories WHERE id = $1 AND type = 'business'", [value.categoryId]);
+  if (!category.rowCount) {
+    res.status(400).json({ errors: { categoryId: 'Choose a category.' } });
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const updated = await client.query(
+      `UPDATE businesses SET category_id = $2, name = $3, description = $4, street = $5, city = $6, postal_code = $7,
+              phone = $8, email = $9, website = $10, status = 'pending', rejection_reason = NULL
+       WHERE id = $1 AND status = 'rejected'`,
+      [id, value.categoryId, value.name, value.description, value.street, value.city, value.postalCode, value.phone, value.email, value.website],
+    );
+    if (!updated.rowCount) {
+      await client.query('ROLLBACK');
+      res.status(404).json({ error: 'Submission not found.' });
+      return;
+    }
+    await client.query('DELETE FROM business_hours WHERE business_id = $1', [id]);
+    for (const { day, opens, closes } of value.hours) {
+      await client.query(
+        'INSERT INTO business_hours (business_id, day_of_week, opens_at, closes_at) VALUES ($1, $2, $3, $4)',
+        [id, day, opens, closes],
+      );
+    }
+    await client.query('COMMIT');
+    res.json({ business: { id, name: value.name, status: 'pending' } });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+});
+
 // REQ-3.3.2 one business in full. A pending or rejected listing answers "not found", exactly like an
 // id that does not exist, so nobody can tell that an unpublished listing is there.
 businessesRouter.get('/:id', async (req, res) => {

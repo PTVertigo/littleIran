@@ -70,7 +70,7 @@ describe('Accessibility tests (browser side)', () => {
     await screen.findByRole('heading', { name: 'Log in' });
 
     for (const name of [
-      'Skip to main content', 'LittleIran', 'Home', 'Businesses', 'Events', 'Log in', 'Sign up',
+      'Skip to main content', 'LittleIran', 'Home', 'Businesses', 'Events', 'Forum', 'Log in', 'Sign up',
       'Email', 'Password', 'Show password', 'Log in', 'Forgot your password?', 'Create an account',
     ]) {
       await userEvent.tab();

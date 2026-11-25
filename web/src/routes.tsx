@@ -1,16 +1,23 @@
 import type { RouteObject } from 'react-router';
 
 import { Layout } from './components/layout';
-import { GuestOnly, RequireAuth } from './components/route-guards';
+import { GuestOnly, RequireAdmin, RequireAuth } from './components/route-guards';
+import { AdminPage } from './pages/admin';
+import { SubmissionsPage } from './pages/submissions';
 import { BusinessDetailPage } from './pages/business-detail';
 import { BusinessesPage } from './pages/businesses';
 import { EventDetailPage } from './pages/event-detail';
 import { EventsPage } from './pages/events';
 import { NewEventPage } from './pages/new-event';
+import { NewForumPostPage } from './pages/new-forum-post';
 import { ChangePasswordPage } from './pages/change-password';
 import { DashboardPage } from './pages/dashboard';
 import { EditProfilePage } from './pages/edit-profile';
 import { ErrorPage } from './pages/error';
+import { ForumPage } from './pages/forum';
+import { ForumCategoryPage } from './pages/forum-category';
+import { ForumSearchPage } from './pages/forum-search';
+import { ForumPostPage } from './pages/forum-post';
 import { ForgotPasswordPage } from './pages/forgot-password';
 import { HomePage } from './pages/home';
 import { LoginPage } from './pages/login';
@@ -34,6 +41,10 @@ export const routes: RouteObject[] = [
           { path: 'businesses/:id', element: <BusinessDetailPage /> },
           { path: 'events', element: <EventsPage /> },
           { path: 'events/:id', element: <EventDetailPage /> },
+          { path: 'forum', element: <ForumPage /> },
+          { path: 'forum/search', element: <ForumSearchPage /> },
+          { path: 'forum/posts/:id', element: <ForumPostPage /> },
+          { path: 'forum/categories/:id', element: <ForumCategoryPage /> },
           {
             element: <GuestOnly />,
             children: [
@@ -48,10 +59,17 @@ export const routes: RouteObject[] = [
             element: <RequireAuth />,
             children: [
               { path: 'dashboard', element: <DashboardPage /> },
+              { path: 'submissions', element: <SubmissionsPage /> },
+              {
+                element: <RequireAdmin />,
+                children: [{ path: 'admin', element: <AdminPage /> }],
+              },
               // Static, so it wins over businesses/:id; only a logged-in member can submit a listing
               { path: 'businesses/new', element: <NewBusinessPage /> },
               // Static, so it wins over events/:id; only a logged-in member can submit an event
               { path: 'events/new', element: <NewEventPage /> },
+              // Only a logged-in member can write a post
+              { path: 'forum/posts/new', element: <NewForumPostPage /> },
               { path: 'profile', element: <ProfilePage /> },
               { path: 'profile/edit', element: <EditProfilePage /> },
               { path: 'users/:id', element: <PublicProfilePage /> },

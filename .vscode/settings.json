@@ -3,5 +3,12 @@
     "source.fixAll": "explicit",
     "source.organizeImports": "explicit",
     "source.sortMembers": "explicit"
-  }
+  },
+  // Jest lives in server/ and web/, not in the root folder, so each gets its own entry in the Testing tab.
+  // Tests run only when started there. The server tests need the database: docker compose up -d in server/
+  "jest.runMode": "on-demand",
+  "jest.virtualFolders": [
+    { "name": "server", "rootPath": "server", "jestCommandLine": "npm test --" },
+    { "name": "web", "rootPath": "web", "jestCommandLine": "npm test --" }
+  ]
 }

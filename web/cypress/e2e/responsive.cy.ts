@@ -15,6 +15,7 @@ const pages = [
   ['business directory', '/businesses'],
   ['business directory, second page', '/businesses?page=2'],
   ['events', '/events'],
+  ['forum', '/forum'],
   ['events filtered and searched', '/events?category=Workshop&search=persian'],
   ['login', '/login'],
   ['register', '/register'],
@@ -56,6 +57,14 @@ describe('Responsive layout (REQ-4.4.1)', () => {
       it('event details and the event form fit the screen', () => {
         cy.request('/api/events').its('body.events.0.id').then((id) => {
           cy.visit(`/events/${id}`);
+          cy.get('main h1').should('be.visible');
+          noSideScroll();
+        });
+      });
+
+      it('forum category posts fit the screen', () => {
+        cy.request('/api/categories?type=forum').its('body.categories.0.id').then((id) => {
+          cy.visit(`/forum/categories/${id}`);
           cy.get('main h1').should('be.visible');
           noSideScroll();
         });
