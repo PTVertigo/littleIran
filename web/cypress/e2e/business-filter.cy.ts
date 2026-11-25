@@ -40,8 +40,9 @@ describe('Business category filter', () => {
   it('can switch from one category to another, and back to All', () => {
     cy.visit('/businesses');
 
-    chip('Restaurant').click();
-    cy.get('article').should('have.length', 6);
+    // Retail, because admin.cy.ts approves a new Restaurant on every run
+    chip('Retail').click();
+    cy.get('article').should('have.length', 4);
     chip('Professional Services').click();
     cy.get('article').should('have.length', 2);
     cy.contains('article h2', 'Alborz Accounting');

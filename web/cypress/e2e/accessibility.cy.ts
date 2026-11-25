@@ -214,11 +214,27 @@ describe('Accessibility (axe, WCAG 2.1 A and AA)', () => {
     cy.get('input[type="email"]').type('admin@test.com');
     cy.get('input[type="password"]').type('Admin123@{enter}');
     cy.location('pathname').should('eq', '/dashboard');
+
+    // A fresh database has nothing pending, so submit an event for this test to open the form on
+    const title = `Axe Review ${Date.now()}`;
+    cy.request('/api/categories?type=event').its('body.categories.0.id').then((categoryId) => {
+      cy.getCookie('csrf_token').then((csrf) => {
+        const date = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+        cy.request({
+          method: 'POST',
+          url: '/api/events',
+          headers: { 'X-CSRF-Token': csrf?.value ?? '' },
+          body: { title, categoryId, description: 'Awaiting review.', location: 'Toronto', date, startTime: '19:00', endTime: '21:00', organizerName: 'Admin', organizerContact: 'host@example.com' },
+        });
+      });
+    });
+
     cy.visit('/admin');
     cy.contains('h1', 'Administration');
-    cy.contains('h2', 'Pending submissions (');
+    cy.contains('article', title).should('be.visible');
     expectNoViolations();
-    cy.get('article').first().contains('button', 'Reject').click();
+    cy.contains('button', `Reject ${title}`).click();
+    cy.contains('article', title).find('textarea').should('be.visible');
     expectNoViolations();
   });
 
